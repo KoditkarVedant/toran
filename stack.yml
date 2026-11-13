@@ -1,0 +1,20 @@
+# Portainer: Stacks -> Add stack -> Web editor -> paste this -> Deploy the stack.
+# First copy the contents of the "deploy" folder to /srv/toran on the Pi.
+# Then open http://<your-pi>:8080
+services:
+  toran:
+    image: alpine:3                    # just a tiny base; the app is the binary in /srv/toran/bin
+    container_name: toran
+    restart: unless-stopped
+    network_mode: host                 # lets the server check your services on localhost and see real client IPs
+    working_dir: /app
+    volumes:
+      - /srv/toran:/app              # page, services.json, backups, wallpapers, icons all live here
+    environment:
+      ADDR: ":8080"                    # port the page is served on
+      ROOT: /app
+      GOMEMLIMIT: 24MiB                # keeps the Go server's memory small
+      # LAN_ONLY: "true"               # only private-network clients may save changes (set "false" to allow anyone)
+    mem_limit: 48m
+    # picks toran-aarch64 / armv7l / armv6l / x86_64 to match the Pi, and makes it executable
+    command: ["sh", "-c", "chmod +x /app/bin/toran-* && exec /app/bin/toran-$$(uname -m)"]
