@@ -46,4 +46,4 @@ Wallpapers are from Wikimedia Commons under CC BY-SA; see [`wallpapers/CREDITS.m
 
 ## License
 
-Not chosen yet.
+[MIT](LICENSE) for the code. The bundled wallpapers are **not** covered by it: each keeps its own CC BY-SA licence and attribution, listed in [`wallpapers/CREDITS.md`](wallpapers/CREDITS.md).
