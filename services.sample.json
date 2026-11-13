@@ -1,0 +1,17 @@
+{
+  "groups": [
+    {
+      "name": "Media",
+      "items": [
+        { "name": "Jellyfin", "url": ":8096", "desc": "Movies & TV", "icon": "🎬" },
+        { "name": "Sonarr", "url": ":8989", "desc": "TV automation", "icon": "📺" }
+      ]
+    },
+    {
+      "name": "Tools",
+      "items": [
+        { "name": "Portainer", "url": ":9000", "desc": "Containers", "icon": "🐳" }
+      ]
+    }
+  ]
+}
