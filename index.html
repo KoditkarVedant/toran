@@ -1,0 +1,1115 @@
+<!doctype html>
+<html lang="en" class="boot">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Toran</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Cpath fill=%27%237a6cff%27 d=%27M3 29V14a13 13 0 0 1 26 0v15h-6V14a7 7 0 0 0-14 0v15z%27/%3E%3C/svg%3E">
+<script>/* apply the last-used theme before first paint (no flash of default colours) */
+try{const b=JSON.parse(localStorage.getItem('toran.boot')||'null');if(b){const r=document.documentElement;for(const k in b.v)r.style.setProperty(k,b.v[k]);r.dataset.mode=b.m;r.style.colorScheme=b.m}}catch{}</script>
+<style>
+/* ============ tokens (the theme engine rewrites the colour ones at runtime) ============ */
+:root{
+  --bg:#0a0c11;--card:#141821;--card-h:#1a2030;--line:#232a3a;--text:#e9ecf3;--mute:#8a93a8;--accent:#6ea8ff;
+  --ok:#3ecf8e;--bad:#ef5b5b;--il:62%;--op:100;--blur:0px;--dim:0;--wblur:0px;--drawer-w:392px;
+  --font:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --glow:color-mix(in srgb,var(--accent) 14%,transparent);
+  --surface:color-mix(in srgb,var(--card) calc(var(--op) * 1%),transparent);
+  --surface-h:color-mix(in srgb,var(--card-h) calc(var(--op) * 1%),transparent);
+  --shadow:0 10px 30px rgba(0,0,0,.4);
+}
+:root[data-mode=light]{--shadow:0 10px 30px rgba(30,50,90,.14)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;color:var(--text);font:15px/1.5 var(--font);
+  background:radial-gradient(900px 500px at 50% -10%,var(--glow),transparent 70%),var(--bg)}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:inherit}
+.hint{font-size:12px;color:var(--mute)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.boot *,.boot *::before,.boot *::after{transition:none!important}
+
+/* wallpaper layer */
+#bg{position:fixed;inset:-40px;z-index:-1;display:none;background:var(--bg) center/cover no-repeat;filter:blur(var(--wblur))}
+#bg::after{content:"";position:absolute;inset:0;background:#000;opacity:var(--dim)}
+
+/* ============ shell (identical in every layout) ============ */
+#app{transition:margin-right .25s ease;zoom:var(--scale,1)}
+body.drawer-open #app{margin-right:calc(var(--drawer-w) / var(--scale,1))}
+#topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:16px;padding:12px clamp(14px,3vw,32px);
+  background:color-mix(in srgb,var(--bg) 62%,transparent);backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);
+  border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:650;font-size:18px;white-space:nowrap}
+.search{position:relative;flex:1;max-width:520px;margin:0 auto}
+.search svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:18px;height:18px;color:var(--mute)}
+.search input{width:100%;padding:10px 44px 10px 40px;border-radius:12px;border:1px solid var(--line);outline:none;
+  background:color-mix(in srgb,var(--card) 78%,transparent);transition:border-color .15s,box-shadow .15s}
+.search input:focus{border-color:var(--accent);box-shadow:0 0 0 4px var(--glow)}
+.search kbd{position:absolute;right:11px;top:50%;transform:translateY(-50%);font:11px ui-monospace,monospace;color:var(--mute);border:1px solid var(--line);border-radius:6px;padding:1px 6px}
+.top-right{display:flex;align-items:center;gap:18px;margin-left:auto}
+.chip{display:flex;align-items:center;gap:8px;line-height:1.15;white-space:nowrap}
+.chip .ci{font-size:20px;line-height:1}
+.chip b{display:block;font-size:15px;font-weight:600}
+.chip small{display:block;font-size:11.5px;color:var(--mute)}
+.actions{display:flex;align-items:center;gap:8px}
+.ib{width:38px;height:38px;border-radius:11px;border:1px solid var(--line);background:color-mix(in srgb,var(--card) 78%,transparent);
+  display:grid;place-items:center;color:var(--mute);transition:.15s;padding:0}
+.ib:hover{color:var(--text);border-color:var(--accent)}
+.ib.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.ib.sm{width:32px;height:32px;border-radius:9px}
+.svg{display:inline-flex;line-height:0}
+#btn-search{display:none}
+
+/* top bar styles: bar (default) | seamless | floating | minimal */
+:root[data-topbar=seamless] #topbar,:root[data-topbar=minimal] #topbar{position:relative;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;border-bottom:0}
+:root[data-topbar=floating] #topbar{top:14px;margin:14px clamp(14px,3vw,32px) 0;padding:9px 14px;border:1px solid var(--line);border-radius:22px;
+  box-shadow:var(--shadow);background:color-mix(in srgb,var(--bg) 55%,transparent)}
+:root[data-topbar=minimal] .brand{display:none}
+:root[data-topbar=minimal] #btn-search{display:grid}
+:root[data-topbar=minimal] .search{flex:0 0 auto;width:0;max-width:0;margin:0;opacity:0;overflow:hidden;transition:width .2s,max-width .2s,opacity .2s}
+:root[data-topbar=minimal] .search:focus-within,:root[data-topbar=minimal] .search:has(input:not(:placeholder-shown)){width:min(420px,46vw);max-width:420px;opacity:1;overflow:visible}
+:root[data-topbar=minimal] .top-right{flex:1;margin-left:0}
+:root[data-topbar=minimal] .top-right .actions{margin-left:auto}
+
+/* app icons (real logos) */
+.ico.app{background:color-mix(in srgb,var(--text) 9%,transparent);color:inherit}
+.ico.app img{object-fit:contain;padding:13%}
+.hero .big .ico{width:auto;height:auto;background:none;border-radius:0;color:#fff;font-size:inherit;display:block}
+.hero .big .ico img{width:clamp(100px,13vw,160px);height:clamp(100px,13vw,160px);object-fit:contain;padding:0;border-radius:26px}
+#recent:not(:empty){margin-bottom:24px}
+@media (max-width:980px){#wx-chip{display:none!important}}
+@media (max-width:720px){.brand span,.chip.clock small{display:none}.top-right{gap:10px}}
+@media (max-width:560px){.chip.clock{display:none}}
+
+#body{display:grid;grid-template-columns:minmax(0,1fr);gap:0 28px;max-width:1260px;margin:0 auto;padding:22px clamp(14px,3vw,32px) 72px}
+:root[data-nav=sidebar] #body{grid-template-columns:210px minmax(0,1fr)}
+#editbar{grid-column:1/-1;display:none;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;margin-bottom:20px;border-radius:14px;
+  background:color-mix(in srgb,var(--accent) 13%,transparent);border:1px solid color-mix(in srgb,var(--accent) 45%,transparent);font-size:14px}
+#editbar .sp{flex:1}
+body.editing #editbar{display:flex}
+.btn{padding:8px 14px;border-radius:10px;border:1px solid var(--line);background:var(--card-h);transition:.15s}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.danger{color:var(--bad)}
+.btn.sm{padding:6px 11px;font-size:13px}
+
+/* group navigation: sections (none), tabs, sidebar */
+#tabs,#side{display:none}
+:root[data-nav=tabs] #tabs{display:flex;gap:4px;padding:5px;margin-bottom:20px;width:max-content;max-width:100%;overflow-x:auto;scrollbar-width:none;
+  border-radius:999px;background:var(--surface);border:1px solid var(--line);backdrop-filter:blur(var(--blur))}
+#tabs button{border:0;border-radius:999px;background:transparent;color:var(--mute);padding:8px 20px;white-space:nowrap}
+#tabs button:hover{color:var(--text)}
+#tabs button.on{background:var(--text);color:var(--bg)}
+:root[data-nav=sidebar] #side{display:flex;flex-direction:column;gap:2px;position:sticky;top:84px;align-self:start;padding:10px;border-radius:18px;
+  background:var(--surface);border:1px solid var(--line);backdrop-filter:blur(var(--blur))}
+#side button{border:0;background:transparent;text-align:left;padding:10px 14px;border-radius:12px;color:var(--mute)}
+#side button:hover{background:var(--surface-h);color:var(--text)}
+#side button.on{background:var(--accent);color:#fff}
+@media (max-width:760px){
+  :root[data-nav=sidebar] #body{grid-template-columns:minmax(0,1fr)}
+  :root[data-nav=sidebar] #side{position:static;flex-direction:row;overflow-x:auto;margin-bottom:18px}
+}
+#main{grid-column:auto;min-width:0}
+:root[data-nav=sidebar] #editbar{grid-column:1/-1}
+
+/* featured banner + recent row (optional components, any layout) */
+.hero{display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:200px;padding:30px 40px;margin-bottom:22px;
+  border-radius:calc(var(--radius,14px) * 2);color:#fff;text-decoration:none;overflow:hidden;box-shadow:var(--shadow);
+  background:linear-gradient(105deg,hsl(var(--h) 50% 8%) 35%,hsl(var(--h) 62% 28%));transition:transform .2s}
+.hero:hover,.hero:focus-visible{transform:scale(1.01);outline:3px solid #fff;outline-offset:-3px}
+.hero .tag{font-size:12px;letter-spacing:.14em;text-transform:uppercase;opacity:.75}
+.hero h2{font-size:clamp(32px,5vw,56px);margin:6px 0 4px;font-weight:800;letter-spacing:-.02em;line-height:1.05}
+.hero p{opacity:.82;margin:0 0 18px}
+.hero .open{display:inline-flex;padding:9px 22px;border-radius:999px;background:#fff;color:#111;font-weight:650}
+.hero .big{font-size:clamp(80px,13vw,150px);line-height:1;filter:drop-shadow(0 10px 30px rgba(0,0,0,.45))}
+.hero .big img{width:clamp(100px,13vw,160px);border-radius:26px;display:block}
+#hero:empty,#recent:empty{display:none}
+@media (max-width:640px){.hero{padding:22px}.hero .big{display:none}}
+.rrow{display:flex;gap:14px;overflow-x:auto;padding:6px 4px 12px;scrollbar-width:none}
+.rcard{flex:0 0 clamp(200px,22vw,260px);height:122px;padding:14px 16px;border-radius:calc(var(--radius,14px) * 1.3);display:flex;flex-direction:column;justify-content:space-between;
+  color:#fff;text-decoration:none;background:linear-gradient(150deg,hsl(var(--h) 55% 32%),hsl(var(--h) 50% 14%));transition:transform .18s}
+.rcard:hover,.rcard:focus-visible{transform:scale(1.04);outline:3px solid #fff}
+.rcard .ico{width:38px;height:38px;font-size:20px;background:rgba(255,255,255,.14);color:#fff}
+.rcard .name{font-weight:600}
+.rcard .desc{font-size:12px;color:rgba(255,255,255,.72)}
+
+/* groups + tiles (one DOM, many layouts) */
+.group{margin-bottom:30px}
+.group>h2,#recent>h2{display:inline-block;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin:0 0 12px 4px}
+.group.solo>h2{display:none}
+:root[data-wall] .group>h2,:root[data-wall] #recent>h2{padding:4px 12px;border-radius:999px;color:var(--text);
+  background:color-mix(in srgb,var(--bg) 58%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--tile-min,240px),1fr));gap:12px}
+.tile{position:relative;display:flex;align-items:center;gap:14px;min-width:0;padding:14px 16px;border-radius:var(--radius,14px);
+  background:var(--surface);backdrop-filter:blur(var(--blur));-webkit-backdrop-filter:blur(var(--blur));border:1px solid var(--line);
+  color:inherit;text-decoration:none;transition:transform .15s,background .15s,border-color .15s,box-shadow .15s}
+.tile:hover,.tile:focus-visible,.tile.first{transform:translateY(-2px);background:var(--surface-h);border-color:var(--accent);box-shadow:var(--shadow);outline:none}
+:root[data-surface=outline] .tile:hover,:root[data-surface=outline] .tile:focus-visible{background:var(--glow)}
+.ico{flex:none;width:44px;height:44px;border-radius:calc(var(--radius,14px) * .8);display:grid;place-items:center;font-size:22px;font-weight:650;overflow:hidden;
+  background:color-mix(in srgb,hsl(var(--h,200) 70% 55%) 20%,transparent);color:hsl(var(--h,200) 80% var(--il))}
+.ico img{width:100%;height:100%;object-fit:cover}
+.meta{min-width:0}
+.name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.desc{font-size:13px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+:root[data-nodesc] .desc{display:none!important}
+.dot{position:absolute;top:12px;right:12px;width:8px;height:8px;border-radius:50%;background:var(--mute);opacity:.4}
+.dot.up{background:var(--ok);opacity:1;box-shadow:0 0 8px var(--ok)}
+.dot.down{background:var(--bad);opacity:1}
+.dot.warn{background:#f5a623;opacity:1;box-shadow:0 0 8px #f5a623}
+.bkrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+:root[data-nostatus] .dot{display:none!important}
+.eb{display:none;position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:9px;border:1px solid var(--line);background:var(--card-h);color:var(--text);place-items:center;padding:0}
+body.editing .eb{display:grid}
+body.editing .dot{display:none}
+body.editing .tile{cursor:grab;border-style:dashed}
+.tile.dragging{opacity:.35}
+.tile.over{border-color:var(--accent);transform:scale(1.03)}
+.empty{text-align:center;color:var(--mute);padding:48px 0}
+
+/* ---- layout: list ---- */
+:root[data-layout=list] .grid{grid-template-columns:1fr;gap:0;max-width:780px}
+:root[data-layout=list] .tile{background:transparent;backdrop-filter:none;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:10px 6px}
+:root[data-layout=list] .tile:hover,:root[data-layout=list] .tile:focus-visible,:root[data-layout=list] .tile.first{transform:none;box-shadow:none;background:var(--surface-h);border-color:var(--line)}
+:root[data-layout=list] .ico{width:34px;height:34px;font-size:18px}
+:root[data-layout=list] .meta{display:flex;flex:1;align-items:baseline;gap:14px}
+:root[data-layout=list] .desc{margin-left:auto;padding-right:24px}
+/* ---- layout: compact ---- */
+:root[data-layout=compact] .grid{grid-template-columns:repeat(auto-fill,minmax(var(--tile-min,175px),1fr));gap:8px}
+:root[data-layout=compact] .tile{padding:8px 10px;gap:10px}
+:root[data-layout=compact] .ico{width:32px;height:32px;font-size:17px}
+:root[data-layout=compact] .desc{display:none}
+:root[data-layout=compact] .group{margin-bottom:20px}
+/* ---- layout: launcher (big app icons in one panel per group) ---- */
+:root[data-layout=launcher] .group{padding:16px 18px 12px;border-radius:calc(var(--radius,14px) * 1.8);background:var(--surface);border:1px solid var(--line);
+  backdrop-filter:blur(var(--blur));-webkit-backdrop-filter:blur(var(--blur))}
+:root[data-layout=launcher] .grid{grid-template-columns:repeat(auto-fill,minmax(var(--tile-min,112px),1fr));gap:8px 4px}
+:root[data-layout=launcher] .tile{flex-direction:column;text-align:center;gap:9px;padding:14px 6px 10px;background:transparent;border-color:transparent;backdrop-filter:none}
+:root[data-layout=launcher] .tile:hover,:root[data-layout=launcher] .tile:focus-visible,:root[data-layout=launcher] .tile.first{background:var(--surface-h);border-color:transparent;box-shadow:none}
+:root[data-layout=launcher] .ico{width:68px;height:68px;font-size:34px;border-radius:calc(var(--radius,14px) * 1.4);box-shadow:0 6px 16px rgba(0,0,0,.22)}
+:root[data-layout=launcher] .meta{width:100%}
+:root[data-layout=launcher] .name{white-space:normal;font-size:13px}
+:root[data-layout=launcher] .desc{display:none}
+:root[data-layout=launcher] .dot{top:10px;right:calc(50% - 46px)}
+/* ---- layout: rows (TV style carousels) ---- */
+:root[data-layout=rows] .grid{display:flex;gap:20px;overflow-x:auto;padding:24px 26px 34px;margin:-6px -26px 0;scroll-snap-type:x proximity;scrollbar-width:none}
+:root[data-layout=rows] .grid::-webkit-scrollbar{display:none}
+:root[data-layout=rows] .tile{flex:0 0 clamp(200px,17vw,280px);height:clamp(122px,10vw,164px);flex-direction:column;align-items:flex-start;justify-content:space-between;
+  padding:18px;border-radius:calc(var(--radius,14px) * 1.7);scroll-snap-align:start}
+:root[data-layout=rows] .tile:hover,:root[data-layout=rows] .tile:focus-visible,:root[data-layout=rows] .tile.first{
+  transform:scale(1.07);z-index:2;border-color:transparent;box-shadow:var(--shadow),0 0 0 3px var(--accent)}
+:root[data-layout=rows] .ico{width:54px;height:54px;font-size:27px}
+:root[data-layout=rows] .meta{width:100%}
+:root[data-layout=rows] .name{font-size:18px}
+:root[data-layout=rows] .dot{top:16px;right:16px}
+/* ---- layout: bento (colour mosaic) ---- */
+:root[data-layout=bento] .grid{grid-template-columns:repeat(auto-fill,minmax(var(--tile-min,160px),1fr));grid-auto-rows:150px;grid-auto-flow:dense;gap:14px}
+:root[data-layout=bento] .tile{flex-direction:column;align-items:flex-start;justify-content:space-between;padding:18px;border:0;overflow:hidden;color:#fff;backdrop-filter:none;
+  border-radius:calc(var(--radius,14px) * 2);background:linear-gradient(150deg,hsl(var(--h) 55% 24%),hsl(var(--h) 50% 11%))}
+:root[data-layout=bento] .tile::after{content:"";position:absolute;right:-30px;top:-30px;width:130px;height:130px;border-radius:50%;background:hsl(var(--h) 80% 60% / .18);pointer-events:none}
+:root[data-layout=bento] .tile:hover,:root[data-layout=bento] .tile:focus-visible,:root[data-layout=bento] .tile.first{
+  transform:translateY(-3px) scale(1.015);box-shadow:var(--shadow),0 0 0 2px var(--accent);background:linear-gradient(150deg,hsl(var(--h) 60% 31%),hsl(var(--h) 55% 14%))}
+:root[data-layout=bento] .tile:nth-child(6n+1){grid-column:span 2;grid-row:span 2}
+:root[data-layout=bento] .tile:nth-child(6n+4){grid-column:span 2}
+:root[data-layout=bento] .ico{background:rgba(255,255,255,.14);color:#fff;width:52px;height:52px;font-size:26px;z-index:1}
+:root[data-layout=bento] .tile:nth-child(6n+1) .ico{width:80px;height:80px;font-size:40px;border-radius:calc(var(--radius,14px) * 1.6)}
+:root[data-layout=bento] .tile:nth-child(6n+1) .name{font-size:22px}
+:root[data-layout=bento] .desc{color:rgba(255,255,255,.7)}
+:root[data-layout=bento] .meta{width:100%;z-index:1}
+/* ---- layout: cubes (centred cards) ---- */
+:root[data-layout=cubes] .grid{grid-template-columns:repeat(auto-fill,168px);gap:12px}
+:root[data-layout=cubes] .tile{flex-direction:column;justify-content:center;text-align:center;gap:9px;height:120px;padding:12px 10px}
+:root[data-layout=cubes] .ico{width:44px;height:44px;border-radius:11px;font-size:23px;background:color-mix(in srgb,var(--text) 10%,transparent);color:inherit}
+:root[data-layout=cubes] .meta{width:100%}
+:root[data-layout=cubes] .name{font-size:19px;font-weight:500}
+:root[data-layout=cubes] .desc{font-size:11.5px}
+:root[data-layout=cubes] .dot{left:12px;right:auto;top:13px}
+
+/* ============ settings drawer (live preview, no dimming) ============ */
+#drawer{position:fixed;top:0;right:0;bottom:0;z-index:40;width:var(--drawer-w);max-width:100vw;display:flex;flex-direction:column;
+  background:color-mix(in srgb,var(--card) 94%,var(--bg));border-left:1px solid var(--line);box-shadow:-18px 0 50px rgba(0,0,0,.22);
+  transform:translateX(102%);transition:transform .25s ease}
+#drawer.open{transform:none}
+.dr-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.dr-head h3{margin:0;font-size:16px;flex:1}
+.dr-tabs{display:flex;gap:2px;padding:6px 10px 0;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.dr-tabs button{border:0;background:none;padding:9px 11px;border-bottom:2px solid transparent;color:var(--mute);white-space:nowrap}
+.dr-tabs button.on{color:var(--text);border-color:var(--accent)}
+.dr-body{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:20px}
+.dr-foot{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
+.dr-foot .sp{flex:1}
+.f .lbl{display:block;font-size:12px;font-weight:600;color:var(--mute);margin-bottom:8px;letter-spacing:.02em}
+.f .row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.f .row .lbl{margin:0;flex:1}
+.f .val{font-size:12px;color:var(--mute);font-variant-numeric:tabular-nums}
+.link{border:0;background:none;color:var(--accent);font-size:12px;padding:0}
+.in{width:100%;padding:9px 11px;border-radius:10px;border:1px solid var(--line);background:var(--bg);outline:none}
+.in:focus{border-color:var(--accent)}
+select.in{appearance:auto}
+input[type=range]{width:100%;accent-color:var(--accent);padding:0}
+input[type=color]{width:100%;height:38px;padding:3px;border-radius:10px;border:1px solid var(--line);background:var(--bg)}
+.seg{display:flex;padding:3px;gap:2px;border-radius:11px;background:var(--bg);border:1px solid var(--line)}
+.seg button{flex:1;border:0;background:none;padding:7px 8px;border-radius:8px;color:var(--mute)}
+.seg button.on{background:var(--card-h);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.18)}
+.pick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.pick.c4{grid-template-columns:repeat(4,1fr)}
+.pick button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:7px 6px 6px;font-size:11.5px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--text)}
+.pick button:hover{border-color:var(--mute)}
+.pick button.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--glow)}
+.sw{display:flex;width:100%;height:30px;border-radius:8px;overflow:hidden;border:1px solid rgba(128,128,128,.25)}
+.sw i{flex:1}
+.ph{width:100%;height:34px;border-radius:8px;background:var(--bg) center/cover;border:1px solid rgba(128,128,128,.25)}
+.thumb{width:100%;height:32px;fill:currentColor;opacity:.7}
+.sub{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin:12px 0 6px}
+.sub:first-child{margin-top:0}
+.tg{display:flex;align-items:center;gap:12px;cursor:pointer}
+.tg span{flex:1}
+.tg input{position:absolute;opacity:0;pointer-events:none}
+.tg i{width:40px;height:23px;border-radius:99px;background:var(--line);position:relative;transition:.15s;flex:none}
+.tg i::after{content:"";position:absolute;top:3px;left:3px;width:17px;height:17px;border-radius:50%;background:#fff;transition:.15s}
+.tg input:checked+i{background:var(--accent)}
+.tg input:checked+i::after{left:20px}
+.tg input:focus-visible+i{box-shadow:0 0 0 3px var(--glow)}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap}
+@media (max-width:900px){body.drawer-open #app{margin-right:0}#drawer{width:min(var(--drawer-w),100vw)}}
+
+/* ============ screensaver ============ */
+dialog#ss{border:0;border-radius:0;padding:0;width:100vw;height:100vh;max-width:none;max-height:none;background:#000 center/cover no-repeat;color:#fff;overflow:hidden;cursor:none}
+dialog#ss::backdrop{background:#000}
+#ss-in{position:absolute;inset:0;display:grid;place-content:center;text-align:center;animation:drift 90s ease-in-out infinite alternate}
+#ss-time{font-size:clamp(64px,16vw,220px);font-weight:200;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1}
+#ss-date{font-size:clamp(16px,2.6vw,32px);color:rgba(255,255,255,.7);margin-top:8px}
+@keyframes drift{from{transform:translate(-4vw,-3vh)}to{transform:translate(4vw,3vh)}}
+#ss-cv{display:none;position:absolute;inset:0;width:100%;height:100%}
+#ss[data-style=stars] #ss-cv{display:block}
+.aur{display:none;position:absolute;border-radius:50%;filter:blur(70px);opacity:.55;will-change:transform}
+#ss[data-style=aurora] .aur{display:block}
+.aur.a{width:60vw;height:60vw;background:#6a5cff;left:-10vw;top:-15vw;animation:fa 22s ease-in-out infinite alternate}
+.aur.b{width:50vw;height:50vw;background:#00d4aa;right:-10vw;top:10vh;animation:fb 28s ease-in-out infinite alternate}
+.aur.c{width:55vw;height:55vw;background:#ff5fa2;left:20vw;bottom:-25vw;animation:fc 25s ease-in-out infinite alternate}
+@keyframes fa{to{transform:translate(25vw,18vh)}}
+@keyframes fb{to{transform:translate(-25vw,15vh)}}
+@keyframes fc{to{transform:translate(10vw,-20vh)}}
+#ss[data-style=photo]::before{content:"";position:absolute;inset:0;background:rgba(0,0,0,.35)}
+
+#toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);opacity:0;pointer-events:none;z-index:60;
+  background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 16px;box-shadow:var(--shadow);transition:.2s}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+#toast.bad{border-color:var(--bad);color:var(--bad)}
+</style>
+<link rel="stylesheet" href="custom.css">
+</head>
+<body>
+<div id="bg"></div>
+<script>try{const b=JSON.parse(localStorage.getItem('toran.boot')||'null');if(b&&b.w){const e=document.getElementById('bg');e.style.display='block';e.style.backgroundImage=b.w}}catch{}</script>
+<div id="app">
+  <header id="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><path style="fill:var(--accent)" d="M3 29V14a13 13 0 0 1 26 0v15h-6V14a7 7 0 0 0-14 0v15z"/><circle style="fill:var(--accent)" cx="16" cy="14" r="2.2"/></svg>
+      <span id="brand-t">Toran</span>
+    </div>
+    <label class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Search services…" autocomplete="off" aria-label="Search services">
+      <kbd>/</kbd>
+    </label>
+    <div class="top-right">
+      <div class="chip" id="wx-chip" style="display:none"><span class="ci" id="wx-i"></span><div><b id="wx-t"></b><small id="wx-d"></small></div></div>
+      <div class="chip clock"><div><b id="time"></b><small id="date"></small></div></div>
+      <div class="actions">
+        <button class="ib" id="btn-search" title="Search" aria-label="Search"></button>
+        <button class="ib" id="btn-edit" title="Edit services" aria-label="Edit services"></button>
+        <button class="ib" id="btn-settings" title="Appearance &amp; settings" aria-label="Appearance and settings"></button>      </div>
+    </div>
+  </header>
+
+  <div id="body">
+    <div id="editbar">
+      <span>✎ Editing — drag to reorder, click a service to change it</span><span class="sp"></span>
+      <button class="btn primary sm" id="btn-add">+ Add service</button>
+      <button class="btn sm" id="btn-done">Done</button>
+    </div>
+    <nav id="side" aria-label="Groups"></nav>
+    <main id="main">
+      <div id="hero"></div>
+      <nav id="tabs" aria-label="Groups"></nav>
+      <div id="groups"></div>
+      <div id="recent"></div>
+    </main>
+  </div>
+</div>
+
+<aside id="drawer" aria-label="Settings"></aside>
+<input type="file" id="file" accept="application/json" hidden>
+<input type="file" id="wfile" accept="image/*" hidden>
+<dialog id="ss" aria-label="Screensaver">
+  <canvas id="ss-cv"></canvas><i class="aur a"></i><i class="aur b"></i><i class="aur c"></i>
+  <div id="ss-in"><div id="ss-time"></div><div id="ss-date"></div></div>
+</dialog>
+<div id="toast" role="status"></div>
+
+<script>
+/* ======================================================================
+   Data + constants
+   ====================================================================== */
+const DEFAULT = { groups: [
+  { name: 'Media', items: [
+    { name: 'Jellyfin', url: ':8096', desc: 'Movies & TV', icon: '🎬' },
+    { name: 'Sonarr', url: ':8989', desc: 'TV automation', icon: '📺' } ] },
+  { name: 'Tools', items: [
+    { name: 'Portainer', url: ':9000', desc: 'Containers', icon: '🐳' } ] }
+]};
+
+const T = (id, name, mode, c) => ({ id, name, mode, c: { bg: c[0], card: c[1], 'card-h': c[2], line: c[3], text: c[4], mute: c[5], accent: c[6] } });
+const THEMES = [
+  T('dark', 'Dark', 'dark', ['#0a0c11', '#141821', '#1a2030', '#232a3a', '#e9ecf3', '#8a93a8', '#6ea8ff']),
+  T('amoled', 'Black', 'dark', ['#000000', '#141414', '#1d1d1d', '#262626', '#ffffff', '#8b8b8b', '#7a6cff']),
+  T('catppuccin', 'Mocha', 'dark', ['#1e1e2e', '#262637', '#313244', '#3b3d52', '#cdd6f4', '#9399b2', '#cba6f7']),
+  T('nord', 'Nord', 'dark', ['#2e3440', '#3b4252', '#434c5e', '#4c566a', '#eceff4', '#9aa5b8', '#88c0d0']),
+  T('dracula', 'Dracula', 'dark', ['#282a36', '#343746', '#3d4157', '#44475a', '#f8f8f2', '#8f95b8', '#bd93f9']),
+  T('gruvbox', 'Gruvbox', 'dark', ['#282828', '#32302f', '#3c3836', '#504945', '#ebdbb2', '#a89984', '#fabd2f']),
+  T('tokyo', 'Tokyo Night', 'dark', ['#1a1b26', '#24283b', '#2f334d', '#3b4261', '#c0caf5', '#8a93bd', '#7aa2f7']),
+  T('rosepine', 'Rosé Pine', 'dark', ['#191724', '#1f1d2e', '#26233a', '#403d52', '#e0def4', '#908caa', '#ebbcba']),
+  T('solarized', 'Solarized', 'dark', ['#002b36', '#073642', '#0b4350', '#165463', '#eee8d5', '#839496', '#268bd2']),
+  T('terminal', 'Terminal', 'dark', ['#050a05', '#08110a', '#0d1d11', '#1d3a26', '#c8f7d4', '#5f9a73', '#39ff7a']),
+  T('light', 'Light', 'light', ['#f4f6fb', '#ffffff', '#f0f4ff', '#e2e7f1', '#161b28', '#667089', '#2f6fed']),
+  T('paper', 'Paper', 'light', ['#f3ead8', '#fbf6ea', '#fffaf0', '#dacdb1', '#3a2f22', '#8a7a62', '#b5562b']),
+  T('latte', 'Latte', 'light', ['#eff1f5', '#ffffff', '#e6e9ef', '#ccd0da', '#4c4f69', '#6c6f85', '#8839ef']),
+  T('solarlight', 'Solar Light', 'light', ['#fdf6e3', '#eee8d5', '#f5eedb', '#d8d0b8', '#586e75', '#7a8b8d', '#268bd2']),
+];
+const autoTheme = () => THEMES.find(t => t.id === (matchMedia('(prefers-color-scheme:light)').matches ? 'light' : 'dark'));
+const themeOf = id => THEMES.find(t => t.id === id) || autoTheme();
+
+const R = a => a.map(([x, y, w, h]) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2.5"/>`).join('');
+const spread = (cols, rows, f) => Array.from({ length: cols * rows }, (_, n) => f(n % cols, Math.floor(n / cols)));
+const LAYOUTS = [
+  { id: 'grid', name: 'Grid', svg: R([[3, 3, 20, 11], [25, 3, 20, 11], [3, 16, 20, 11], [25, 16, 20, 11]]) },
+  { id: 'list', name: 'List', svg: R([[3, 4, 42, 5], [3, 12, 42, 5], [3, 20, 42, 5]]) },
+  { id: 'compact', name: 'Compact', svg: R(spread(4, 3, (c, r) => [3 + c * 11.5, 4 + r * 9, 9.5, 7])) },
+  { id: 'launcher', name: 'Launcher', svg: R(spread(4, 2, (c, r) => [4 + c * 11.5, 3 + r * 14, 9, 9]).concat(spread(4, 2, (c, r) => [4 + c * 11.5, 13 + r * 14, 9, 2]))) },
+  { id: 'rows', name: 'TV Rows', svg: R([[3, 3, 13, 10], [18, 3, 13, 10], [33, 3, 13, 10], [3, 17, 13, 10], [18, 17, 13, 10], [33, 17, 13, 10]]) },
+  { id: 'bento', name: 'Bento', svg: R([[3, 3, 20, 24], [25, 3, 20, 11], [25, 16, 9, 11], [36, 16, 9, 11]]) },
+  { id: 'cubes', name: 'Cubes', svg: R([[4, 8, 12, 14], [18, 8, 12, 14], [32, 8, 12, 14]]) },
+];
+
+/* "Looks" = one-click bundles of the independent settings below */
+const LOOK_KEYS = ['layout', 'theme', 'surface', 'nav', 'topbar', 'featured', 'recent', 'wall', 'dim', 'wallBlur', 'op', 'radius', 'font', 'tileMin', 'accent'];
+const LOOKS = [
+  { name: 'Classic', set: {} },
+  { name: 'Cubes', set: { layout: 'cubes', theme: 'amoled', wall: '' } },
+  { name: 'Glass TV', set: { layout: 'launcher', theme: 'dark', surface: 'glass', nav: 'tabs', topbar: 'floating', featured: true, recent: true, wall: 'wallpapers/alps.jpg', dim: 20 } },
+  { name: 'TV Rows', set: { layout: 'rows', theme: 'dark', surface: 'glass', topbar: 'seamless', wall: 'wallpapers/forest.jpg', dim: 30 } },
+  { name: 'Bento', set: { layout: 'bento', theme: 'amoled', wall: '' } },
+  { name: 'Sidebar', set: { nav: 'sidebar' } },
+  { name: 'Minimal', set: { layout: 'list', surface: 'outline', wall: '' } },
+  { name: 'Terminal', set: { layout: 'compact', theme: 'terminal', surface: 'outline', font: 'mono', wall: '' } },
+  { name: 'Nord Lake', set: { theme: 'nord', surface: 'glass', wall: 'wallpapers/tekapo.jpg', dim: 25 } },
+];
+
+const PRESETS = {   // gradient wallpapers: zero files
+  auto: 'radial-gradient(900px 600px at 12% -5%,color-mix(in srgb,var(--accent) 38%,transparent),transparent 60%),radial-gradient(800px 600px at 95% 5%,color-mix(in srgb,#ff5fa2 22%,transparent),transparent 60%),radial-gradient(900px 700px at 50% 115%,color-mix(in srgb,var(--accent) 22%,transparent),transparent 60%)',
+  aurora: 'radial-gradient(800px 500px at 15% 0%,rgba(106,92,255,.7),transparent 60%),radial-gradient(700px 500px at 90% 15%,rgba(0,212,170,.5),transparent 60%),radial-gradient(800px 600px at 50% 110%,rgba(255,95,162,.45),transparent 60%),linear-gradient(#0b0a1f,#0b0a1f)',
+  sunset: 'radial-gradient(900px 600px at 80% 0%,rgba(255,140,60,.75),transparent 60%),radial-gradient(900px 600px at 10% 30%,rgba(255,60,120,.55),transparent 60%),linear-gradient(#2a1033,#14081f)',
+  ocean: 'radial-gradient(900px 600px at 20% 0%,rgba(0,170,255,.6),transparent 60%),radial-gradient(900px 700px at 90% 100%,rgba(0,255,200,.35),transparent 60%),linear-gradient(#04182e,#020b1a)',
+  midnight: 'radial-gradient(900px 600px at 50% -10%,rgba(90,100,255,.35),transparent 65%),linear-gradient(#0a0c18,#05060d)',
+  forest: 'radial-gradient(900px 600px at 10% 0%,rgba(80,200,120,.45),transparent 60%),radial-gradient(800px 600px at 100% 90%,rgba(20,120,90,.5),transparent 60%),linear-gradient(#07140f,#030a07)',
+  rose: 'radial-gradient(900px 600px at 85% 0%,rgba(255,170,190,.55),transparent 60%),radial-gradient(800px 600px at 5% 90%,rgba(190,140,255,.45),transparent 60%),linear-gradient(#1d1026,#0e0814)',
+};
+const PHOTOS = [['meadow', 'Meadow'], ['tekapo', 'Lake'], ['sunset', 'Sunset'], ['alps', 'Alps'], ['forest', 'Forest'], ['autumn', 'Autumn'], ['coast', 'Coast'], ['falls', 'Falls']];
+// wall: undefined = soft default mesh, '' = none, 'preset:x', 'wallpapers/x.jpg' (bundled), 'wallpaper/…' (uploaded) or a URL
+const wallCss = w => {
+  if (w === undefined) w = 'preset:auto';
+  if (!w) return '';
+  return w.startsWith('preset:') ? (PRESETS[w.slice(7)] || '') : `url("${w.replace(/"/g, '%22')}")`;
+};
+const FONTS = {
+  system: 'system-ui,-apple-system,"Segoe UI",Roboto,sans-serif',
+  rounded: 'ui-rounded,"SF Pro Rounded",Nunito,"Segoe UI",system-ui,sans-serif',
+  serif: 'Georgia,"Iowan Old Style",serif',
+  mono: 'ui-monospace,SFMono-Regular,Menlo,Consolas,monospace',
+};
+const SVG = (body, w = 18) => `<svg viewBox="0 0 24 24" width="${w}" height="${w}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+const ICONS = {
+  edit: SVG('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>'),
+  gear: SVG('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/>'),
+  check: SVG('<path d="M5 12l5 5L20 7"/>'),
+  search: SVG('<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>'),
+};
+
+/* ======================================================================
+   Helpers
+   ====================================================================== */
+const KEY = 'toran.config.v2';
+const $ = s => document.querySelector(s);
+const el = (t, a = {}, ...c) => {
+  const e = document.createElement(t);
+  for (const [k, v] of Object.entries(a)) {
+    if (k === 'class') e.className = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (v != null && v !== false) e.setAttribute(k, v === true ? '' : v);
+  }
+  e.append(...c.flat().filter(x => x != null && x !== false));
+  return e;
+};
+const icoEl = k => { const s = el('span', { class: 'svg' }); s.innerHTML = ICONS[k]; return s; };
+const resolve = u => /^:?\d+$/.test(u) ? `${location.protocol}//${location.hostname}:${u.replace(':', '')}` : u;
+const hue = s => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
+const isImg = s => /^(https?:|\/|\.)/.test(s || '');
+const isLocalWall = u => /^wallpaper\//.test(u || '');
+
+let cfg, editing = false, query = '', activeGroup = 'all', drag = null;
+const status = {};
+const S = () => (cfg.settings ||= {});
+
+/* ======================================================================
+   Load / migrate / save
+   ====================================================================== */
+function migrate(c) {   // earlier versions had one combined "design" setting
+  const s = c.settings; if (!s) return c;
+  const d = s.design, fname = typeof s.featured === 'string' ? s.featured : null;   // old: featured was a service name
+  if (d && !s.layout) {
+    const m = { minimal: { layout: 'list' }, compact: { layout: 'compact' }, launcher: { layout: 'launcher' },
+      tv: { layout: 'rows', surface: 'glass' }, bento: { layout: 'bento', theme: 'amoled' }, rail: { nav: 'sidebar' },
+      cubes: { layout: 'cubes', theme: 'amoled' }, vision: { layout: 'launcher', theme: 'dark', surface: 'glass', nav: 'tabs', featured: true, recent: true },
+      glass: { surface: 'glass', theme: 'dark' }, terminal: { layout: 'compact', theme: 'terminal', surface: 'outline', font: 'mono' },
+      paper: { theme: 'paper' }, catppuccin: { theme: 'catppuccin' }, nord: { theme: 'nord' }, dracula: { theme: 'dracula' },
+      gruvbox: { theme: 'gruvbox' }, tokyo: { theme: 'tokyo' }, rosepine: { theme: 'rosepine' }, solarized: { theme: 'solarized' } };
+    Object.assign(s, m[d] || {});
+  }
+  delete s.design;
+  if (fname) { s.featuredItem = fname; s.featured = d === 'vision'; }
+  return c;
+}
+async function fromFile() {
+  try { const r = await fetch('services.json', { cache: 'no-store' }); if (r.ok) return await r.json(); } catch {}
+  return null;
+}
+async function load() {
+  const server = await fromFile();
+  if (server) return migrate(server);
+  try { const s = localStorage.getItem(KEY); if (s) return migrate(JSON.parse(s)); } catch {}
+  return structuredClone(DEFAULT);
+}
+let toastTimer, saveTimer;
+function toast(msg, bad) {
+  const t = $('#toast'); t.textContent = msg; t.className = 'show' + (bad ? ' bad' : '');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.className = ''; }, 2800);
+}
+const saveNote = (txt) => { const n = $('#savestate'); if (n) n.textContent = txt; };
+async function persist() {
+  try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch {}
+  saveNote('Saving…');
+  try {
+    const r = await fetch('services.json', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cfg, null, 2) });
+    if (!r.ok) throw new Error(r.status);
+    try { localStorage.removeItem(KEY); } catch {}
+    dirty = false; saveNote('Saved ✓'); return true;
+  } catch { saveNote('Not saved to server'); toast('Could not save to the server. Kept in this browser only.', true); return false; }
+}
+let dirty = false;
+const queueSave = () => { dirty = true; saveNote('Saving…'); clearTimeout(saveTimer); saveTimer = setTimeout(persist, 700); };
+
+/* ======================================================================
+   Applying settings (theme engine + css hooks)
+   ====================================================================== */
+function applySettings(s = cfg.settings || {}) {
+  const root = document.documentElement, st = root.style;
+  const val = (k, v) => v == null ? st.removeProperty(k) : st.setProperty(k, v);
+  const flag = (n, on) => on ? root.setAttribute('data-' + n, '') : root.removeAttribute('data-' + n);
+  document.title = s.title || 'Toran';
+  const th = themeOf(s.theme);
+  for (const [k, v] of Object.entries(th.c)) st.setProperty('--' + k, v);
+  root.dataset.mode = th.mode; st.colorScheme = th.mode;
+  val('--il', th.mode === 'dark' ? '62%' : '40%');
+  val('--accent', s.accent || th.c.accent);
+  root.dataset.layout = s.layout || 'grid';
+  root.dataset.nav = s.nav || 'sections';
+  root.dataset.topbar = s.topbar || 'bar';
+  val('--scale', s.scale ? s.scale / 100 : null);
+  const surf = s.surface || 'solid';
+  root.dataset.surface = surf;
+  const op = s.op ?? (surf === 'glass' ? 55 : surf === 'outline' ? 0 : 100);
+  val('--op', op); val('--blur', surf === 'glass' || (op < 100 && surf !== 'outline') ? '18px' : '0px');
+  val('--tile-min', s.tileMin ? s.tileMin + 'px' : null);
+  val('--radius', Number.isFinite(s.radius) ? s.radius + 'px' : null);
+  val('--font', FONTS[s.font] || null);
+  const wc = wallCss(s.wall), bg = $('#bg');
+  bg.style.display = wc ? 'block' : 'none'; bg.style.backgroundImage = wc;
+  flag('wall', !!wc && s.wall !== undefined && s.wall !== 'preset:auto');
+  val('--wblur', (s.wallBlur || 0) + 'px'); val('--dim', (s.dim || 0) / 100);
+  flag('nodesc', s.desc === false); flag('nostatus', s.status === false);
+  try {   // remembered so the next load paints the right theme immediately
+    const v = {}; ['--bg', '--card', '--card-h', '--line', '--text', '--mute', '--accent', '--il', '--dim', '--wblur'].forEach(k => { v[k] = st.getPropertyValue(k); });
+    localStorage.setItem('toran.boot', JSON.stringify({ m: th.mode, v, w: wc }));
+  } catch {}
+}
+matchMedia('(prefers-color-scheme:light)').addEventListener('change', () => cfg && applySettings());
+
+/* ======================================================================
+   Rendering (one shell, one DOM, layouts are pure CSS)
+   ====================================================================== */
+/* ---- icons: emoji/text, image URL, or a real app logo looked up by name ---------------------
+   Logos come from the open "dashboard-icons" set. Order tried: icons/<slug>.svg|png on this server,
+   then the CDN. A logo found on the CDN is copied to the server so it keeps working offline. */
+const ICON_CDN = 'https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons';
+const slugOf = v => { const t = (v || '').trim().replace(/\.(svg|png|webp)$/i, ''); return !isImg(v) && /^[a-z0-9][a-z0-9_-]+$/.test(t) ? t : null; };
+const autoSlug = name => name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+const iconCache = new Map();      // slug -> url | null (none found) | Promise
+const canLoad = u => new Promise(r => { const im = new Image(); im.onload = () => r(true); im.onerror = () => r(false); im.src = u; });
+async function cacheIcon(slug, url) {
+  try {
+    const ext = url.endsWith('.png') ? 'png' : 'svg', b = await (await fetch(url)).blob();
+    await fetch(`icons/${slug}.${ext}`, { method: 'PUT', headers: { 'Content-Type': b.type || 'image/svg+xml' }, body: b });
+  } catch {}
+}
+function resolveIcon(slug) {
+  if (iconCache.has(slug)) return iconCache.get(slug);
+  const urls = [`icons/${slug}.svg`, `icons/${slug}.png`, `${ICON_CDN}/svg/${slug}.svg`, `${ICON_CDN}/png/${slug}.png`];
+  const p = (async () => {
+    for (let i = 0; i < urls.length; i++) if (await canLoad(urls[i])) { if (i >= 2) cacheIcon(slug, urls[i]); iconCache.set(slug, urls[i]); return urls[i]; }
+    iconCache.set(slug, null); return null;
+  })();
+  iconCache.set(slug, p); return p;
+}
+function fillIcon(box, val, name) {
+  box.className = 'ico'; box.replaceChildren();
+  const letter = () => { box.className = 'ico'; box.replaceChildren(name.trim().charAt(0).toUpperCase() || '?'); };
+  const show = u => { box.className = 'ico app'; box.replaceChildren(el('img', { src: u, alt: '' })); };
+  if (isImg(val)) { box.append(el('img', { src: val, alt: '', loading: 'lazy' })); return; }
+  let slug = slugOf(val);
+  if (val && !slug) { box.textContent = val; return; }                       // emoji or short text
+  if (!val) { if (cfg?.settings?.autoIcons === false) return letter(); slug = autoSlug(name); }
+  if (!slug) return letter();
+  letter();                                                                  // letter first, swap in the logo if one exists
+  const hit = iconCache.get(slug);
+  if (typeof hit === 'string') return show(hit);
+  if (hit === null) return;
+  const tok = box._tok = {};
+  resolveIcon(slug).then(u => { if (u && box._tok === tok) show(u); });
+}
+function icon(item) { const box = el('div', { class: 'ico' }); fillIcon(box, item.icon, item.name); return box; }
+const linkAttrs = () => cfg.settings?.newTab ? { target: '_blank', rel: 'noopener' } : {};
+
+/* ---- recently opened / most used (per browser) ---- */
+const RKEY = 'toran.recent';
+const recentMap = () => {
+  try { const m = JSON.parse(localStorage.getItem(RKEY) || '{}'); for (const k in m) if (typeof m[k] === 'number') m[k] = { t: m[k], n: 1 }; return m; }
+  catch { return {}; }
+};
+function bump(item) { const m = recentMap(), o = m[item.name]; m[item.name] = { t: Date.now(), n: (o?.n || 0) + 1 }; try { localStorage.setItem(RKEY, JSON.stringify(m)); } catch {} }
+const recents = (all, by = 'recent') => {
+  const m = recentMap();
+  return all.filter(([, i]) => m[i.name]).sort((a, b) => { const x = m[a[1].name], y = m[b[1].name]; return by === 'used' ? (y.n - x.n) || (y.t - x.t) : y.t - x.t; });
+};
+
+function moveBefore(tg, titem) {      // drag & drop reorder
+  if (!drag || drag.item === titem) { drag = null; return; }
+  drag.g.items = drag.g.items.filter(i => i !== drag.item);
+  const idx = tg.items.indexOf(titem);
+  tg.items.splice(idx < 0 ? tg.items.length : idx, 0, drag.item);
+  drag = null; queueSave(); render();
+}
+function makeTile(g, item, first) {
+  const u = resolve(item.url);
+  const tile = el('a', { class: 'tile' + (first ? ' first' : ''), href: u, title: u, style: '--h:' + hue(item.name), draggable: editing ? 'true' : null, ...linkAttrs() },
+    icon(item),
+    el('div', { class: 'meta' }, el('div', { class: 'name' }, item.name), el('div', { class: 'desc' }, item.desc || u.replace(/^https?:\/\//, ''))),
+    el('span', { class: 'dot ' + (status[u] || ''), 'data-u': u }),
+    el('span', { class: 'eb', 'aria-hidden': 'true' }, icoEl('edit')));
+  tile.addEventListener('click', e => { if (editing) { e.preventDefault(); openDrawer('service', { group: g, item }); } else bump(item); });
+  tile.addEventListener('dragstart', e => { if (!editing) return; drag = { g, item }; if (e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', item.name); } tile.classList.add('dragging'); });
+  tile.addEventListener('dragend', () => { tile.classList.remove('dragging'); document.querySelectorAll('.over').forEach(x => x.classList.remove('over')); drag = null; });
+  tile.addEventListener('dragover', e => { if (drag) { e.preventDefault(); tile.classList.add('over'); } });
+  tile.addEventListener('dragleave', () => tile.classList.remove('over'));
+  tile.addEventListener('drop', e => { e.preventDefault(); e.stopPropagation(); moveBefore(g, item); });
+  return tile;
+}
+function heroEl(item) {
+  const u = resolve(item.url);
+  const a = el('a', { class: 'hero', href: u, style: '--h:' + hue(item.name), ...linkAttrs() },
+    el('div', {}, el('div', { class: 'tag' }, 'Featured'), el('h2', {}, item.name), el('p', {}, item.desc || u.replace(/^https?:\/\//, '')), el('span', { class: 'open' }, 'Open')),
+    el('div', { class: 'big' }, icon(item)));
+  a.addEventListener('click', e => { if (editing) e.preventDefault(); else bump(item); });
+  return a;
+}
+function cardEl(item) {
+  const u = resolve(item.url);
+  const a = el('a', { class: 'rcard', href: u, style: '--h:' + hue(item.name), ...linkAttrs() }, icon(item),
+    el('div', {}, el('div', { class: 'name' }, item.name), el('div', { class: 'desc' }, u.replace(/^https?:\/\//, ''))));
+  a.addEventListener('click', e => { if (editing) e.preventDefault(); else bump(item); });
+  return a;
+}
+function drawNav(nav) {
+  const tabs = $('#tabs'), side = $('#side'); tabs.replaceChildren(); side.replaceChildren();
+  if (nav === 'sections') return;
+  const mk = (key, label) => el('button', { class: key === activeGroup ? 'on' : '', onclick: () => { activeGroup = key; render(); } }, label);
+  (nav === 'tabs' ? tabs : side).append(mk('all', 'All'), ...cfg.groups.map(g => mk(g.name, g.name)));
+}
+function render() {
+  const s = cfg.settings || {}, q = query.trim().toLowerCase(), nav = s.nav || 'sections';
+  if (activeGroup !== 'all' && !cfg.groups.some(g => g.name === activeGroup)) activeGroup = 'all';
+  const all = cfg.groups.flatMap(g => g.items.map(i => [g, i]));
+  const latest = recents(all), rec = s.recentBy === 'used' ? recents(all, 'used') : latest;
+  drawNav(nav);
+
+  const hero = $('#hero'); hero.replaceChildren();
+  if (s.featured && !q) { const f = all.find(([, i]) => i.name === s.featuredItem) || latest[0] || all[0]; if (f) hero.append(heroEl(f[1])); }
+
+  const root = $('#groups'); root.replaceChildren();
+  const showAll = nav === 'sections' || q || activeGroup === 'all';
+  let shown = 0, firstSet = false;
+  for (const g of cfg.groups) {
+    if (!showAll && g.name !== activeGroup) continue;
+    const items = g.items.filter(i => !q || `${i.name} ${i.desc || ''} ${g.name}`.toLowerCase().includes(q));
+    if (!items.length) continue;
+    const grid = el('div', { class: 'grid' });
+    for (const item of items) { grid.append(makeTile(g, item, q && !firstSet)); if (q) firstSet = true; shown++; }
+    const sec = el('section', { class: 'group' + (!showAll ? ' solo' : '') }, el('h2', {}, g.name), grid);
+    sec.addEventListener('dragover', e => { if (drag) e.preventDefault(); });
+    sec.addEventListener('drop', e => { e.preventDefault(); moveBefore(g, null); });
+    root.append(sec);
+  }
+  if (!shown) root.append(el('div', { class: 'empty' }, q ? 'No matches.' : 'No services yet. Use the pencil in the top bar, then “Add service”.'));
+
+  const rc = $('#recent'), main = $('#main'); rc.replaceChildren();
+  if (s.recentPos === 'top') main.insertBefore(rc, $('#tabs')); else main.append(rc);     // top (under the banner) or bottom
+  if (s.recent && !q && rec.length) rc.append(el('h2', {}, s.recentBy === 'used' ? 'Most used' : 'Recent'), el('div', { class: 'rrow' }, ...rec.slice(0, 8).map(([, i]) => cardEl(i))));
+}
+
+/* ======================================================================
+   Status checks, weather, clock
+   ====================================================================== */
+async function ping(u) {
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 3000);
+  try { await fetch(u, { mode: 'no-cors', cache: 'no-store', signal: ctl.signal }); return 'up'; }
+  catch { return 'down'; } finally { clearTimeout(t); }
+}
+/* With the Go server, health is checked from the server (real HTTP codes, no browser limits). Without it, the browser pings. */
+let api = null;                      // set when the Go server is present
+const statusInfo = {};
+async function detectApi() { try { const r = await fetch('api/health', { cache: 'no-store' }); if (r.ok) api = await r.json(); } catch {} }
+const paintDots = () => document.querySelectorAll('.dot').forEach(d => {
+  const u = d.dataset.u, c = statusInfo[u];
+  d.className = 'dot ' + (status[u] || '');
+  d.title = c ? `${c.state}${c.code ? ' · HTTP ' + c.code : ''}${c.ms ? ' · ' + c.ms + ' ms' : ''}` : '';
+});
+async function checkAll() {
+  if (document.hidden || cfg.settings?.status === false) return;
+  if (api) {
+    try {
+      const r = await fetch('api/status', { cache: 'no-store' });
+      if (r.ok) {
+        const st = await r.json();
+        for (const g of cfg.groups) for (const i of g.items) { const c = st[i.url]; if (c) { const u = resolve(i.url); status[u] = c.state; statusInfo[u] = c; } }
+        paintDots(); return;
+      }
+    } catch {}
+  }
+  const urls = [...new Set(cfg.groups.flatMap(g => g.items.map(i => resolve(i.url))))];
+  await Promise.all(urls.map(async u => { status[u] = await ping(u); paintDots(); }));
+}
+
+let wx = null;
+const WX = [[0, '☀️', 'Clear'], [2, '⛅', 'Partly cloudy'], [3, '☁️', 'Overcast'], [48, '🌫️', 'Fog'], [57, '🌦️', 'Drizzle'],
+  [67, '🌧️', 'Rain'], [77, '🌨️', 'Snow'], [82, '🌦️', 'Showers'], [86, '🌨️', 'Snow showers'], [99, '⛈️', 'Thunderstorm']];
+const wxInfo = c => WX.find(([max]) => c <= max) || WX[WX.length - 1];
+async function loadWeather() {
+  const city = cfg.settings?.city; wx = null;
+  if (city) {
+    const key = 'toran.wx.' + city.toLowerCase();
+    try {
+      let c = null; try { c = JSON.parse(localStorage.getItem(key) || 'null'); } catch {}
+      if (c && Date.now() - c.at < 30 * 60000) wx = c;
+      else {
+        const g = await (await fetch('https://geocoding-api.open-meteo.com/v1/search?count=1&name=' + encodeURIComponent(city))).json();
+        const p = g.results?.[0]; if (!p) throw new Error('city not found');
+        const w = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${p.latitude}&longitude=${p.longitude}&current=temperature_2m,weather_code`)).json();
+        const [, ic, desc] = wxInfo(w.current.weather_code);
+        wx = { t: Math.round(w.current.temperature_2m), icon: ic, desc, at: Date.now() };
+        try { localStorage.setItem(key, JSON.stringify(wx)); } catch {}
+      }
+    } catch { wx = null; }
+  }
+  tick();
+}
+function tick() {
+  const d = new Date(), s = cfg?.settings || {};
+  $('#time').textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: s.clock24 ? false : undefined });
+  $('#date').textContent = d.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'short' });
+  $('#brand-t').textContent = s.title || 'Toran';
+  $('#wx-chip').style.display = wx ? '' : 'none';
+  if (wx) { $('#wx-i').textContent = wx.icon; $('#wx-t').textContent = s.tempF ? Math.round(wx.t * 9 / 5 + 32) + '°F' : wx.t + '°C'; $('#wx-d').textContent = wx.desc; }
+}
+
+/* ======================================================================
+   Drawer: appearance settings + service editor (live, non-modal)
+   ====================================================================== */
+let drawerView = null, dTab = 'look', snap = null;
+const orphans = new Set();
+const dropWall = u => { if (isLocalWall(u)) fetch(u, { method: 'DELETE' }).catch(() => {}); };
+const STYLE_ONLY = new Set(['theme', 'surface', 'accent', 'op', 'radius', 'font', 'tileMin', 'wall', 'wallBlur', 'dim', 'layout', 'topbar', 'scale']);
+
+function setKey(k, v) {
+  const s = S();
+  if (k === 'wall') { const old = s.wall; if (isLocalWall(old) && old !== v) orphans.add(old); }
+  if (v === undefined) delete s[k]; else s[k] = v;
+  applySettings(); if (!STYLE_ONLY.has(k)) render();
+  if (k === 'title') tick();
+  queueSave();
+}
+const group = (title, ...kids) => el('div', { class: 'f' }, title ? el('div', { class: 'lbl' }, title) : null, ...kids);
+const sub = t => el('div', { class: 'sub' }, t);
+function pick(items, cur, onPick, cls = '') {
+  return el('div', { class: 'pick ' + cls }, ...items.map(([val, label, node]) =>
+    el('button', { type: 'button', class: val === cur ? 'on' : '', title: label, onclick: () => { onPick(val); drawBody(); } }, node, label)));
+}
+const swatch = c => el('span', { class: 'sw' }, ...c.map(x => el('i', { style: 'background:' + x })));
+function seg(key, opts, def) {
+  const cur = S()[key] ?? def;
+  return el('div', { class: 'seg' }, ...opts.map(([v, l]) => el('button', { type: 'button', class: v === cur ? 'on' : '', onclick: () => { setKey(key, v === def ? undefined : v); drawBody(); } }, l)));
+}
+function slider(key, label, min, max, def, unit = '', auto = false) {
+  const cur = S()[key] ?? def;
+  const out = el('span', { class: 'val' }, auto && S()[key] === undefined ? 'auto' : cur + unit);
+  const inp = el('input', { type: 'range', min, max, value: cur, 'aria-label': label });
+  inp.addEventListener('input', () => { setKey(key, +inp.value); out.textContent = inp.value + unit; });
+  return el('div', { class: 'f' }, el('div', { class: 'row' }, el('span', { class: 'lbl' }, label), out,
+    auto ? el('button', { class: 'link', type: 'button', onclick: () => { setKey(key, undefined); drawBody(); } }, 'Auto') : null), inp);
+}
+function toggle(key, label, def = false) {
+  const cb = el('input', { type: 'checkbox', checked: (S()[key] ?? def) });
+  cb.addEventListener('change', () => setKey(key, cb.checked === def ? undefined : cb.checked));
+  return el('label', { class: 'tg' }, el('span', {}, label), cb, el('i'));
+}
+function textIn(key, label, ph, after) {
+  const inp = el('input', { class: 'in', value: S()[key] || '', placeholder: ph || '', 'aria-label': label });
+  inp.addEventListener('input', () => { setKey(key, inp.value.trim() || undefined); after && after(); });
+  return group(label, inp);
+}
+const selectIn = (label, opts, cur, onChange) => {
+  const sel = el('select', { class: 'in', 'aria-label': label }, ...opts.map(([v, l]) => el('option', { value: v }, l)));
+  sel.value = cur; sel.addEventListener('change', () => onChange(sel.value)); return group(label, sel);
+};
+const debounce = (fn, ms) => { let t; return () => { clearTimeout(t); t = setTimeout(fn, ms); }; };
+const weatherSoon = debounce(() => loadWeather(), 900);
+
+const BODY = {
+  look() {
+    const s = S();
+    return [
+      group('Looks', pick(LOOKS.map(l => { const th = themeOf(l.set.theme); return [l.name, l.name, swatch([th.c.bg, th.c.card, l.set.accent || th.c.accent])]; }),
+        null, name => { const l = LOOKS.find(x => x.name === name); if (isLocalWall(s.wall)) orphans.add(s.wall); LOOK_KEYS.forEach(k => delete s[k]); Object.assign(s, structuredClone(l.set)); setKey('layout', s.layout); render(); })),
+      group('Layout', pick(LAYOUTS.map(l => { const n = el('span'); n.innerHTML = `<svg class="thumb" viewBox="0 0 48 30">${l.svg}</svg>`; return [l.id, l.name, n.firstChild]; }),
+        s.layout || 'grid', v => setKey('layout', v === 'grid' ? undefined : v), '')),
+      group('Top bar', seg('topbar', [['bar', 'Bar'], ['seamless', 'Seamless'], ['floating', 'Floating'], ['minimal', 'Minimal']], 'bar'),
+        el('div', { class: 'hint', style: 'margin-top:8px' }, 'Seamless: no border or background. Floating: a rounded capsule. Minimal: just clock and buttons, search on tap. Good for TVs and tablets.')),
+      group('Colour theme',
+        sub('Dark'),
+        pick([['auto', 'Auto', swatch(['#0a0c11', '#f4f6fb', autoTheme().c.accent])], ...THEMES.filter(t => t.mode === 'dark').map(t => [t.id, t.name, swatch([t.c.bg, t.c.card, t.c.accent])])],
+          s.theme || 'auto', v => setKey('theme', v === 'auto' ? undefined : v)),
+        sub('Light'),
+        pick(THEMES.filter(t => t.mode === 'light').map(t => [t.id, t.name, swatch([t.c.bg, t.c.card, t.c.accent])]),
+          s.theme || 'auto', v => setKey('theme', v))),
+      group('Card surface', seg('surface', [['solid', 'Solid'], ['glass', 'Glass'], ['outline', 'Outline']], 'solid')),
+      slider('op', 'Card opacity', 0, 100, 100, '%', true),
+      group('Accent colour',
+        el('div', { class: 'row' }, el('span', { class: 'lbl' }, s.accent ? s.accent : 'From theme'), s.accent ? el('button', { class: 'link', type: 'button', onclick: () => { setKey('accent', undefined); drawBody(); } }, 'Use theme accent') : null),
+        (() => { const i = el('input', { type: 'color', value: s.accent || themeOf(s.theme).c.accent, 'aria-label': 'Accent colour' }); i.addEventListener('input', () => setKey('accent', i.value)); i.addEventListener('change', drawBody); return i; })()),
+      slider('tileMin', 'Tile size', 110, 360, 240, 'px', true),
+      slider('radius', 'Corner radius', 0, 30, 14, 'px', true),
+      slider('scale', 'UI size (bigger for TVs)', 70, 160, 100, '%', true),
+      selectIn('Font', [['', 'Theme default'], ['system', 'System'], ['rounded', 'Rounded'], ['serif', 'Serif'], ['mono', 'Monospace']], s.font || '', v => setKey('font', v || undefined)),
+    ];
+  },
+  bg() {
+    const s = S(), w = s.wall;
+    const items = [[undefined, 'Default', el('span', { class: 'ph', style: `background-image:${PRESETS.auto}` })], ['', 'None', el('span', { class: 'ph' })],
+      ...PHOTOS.map(([id, n]) => [`wallpapers/${id}.jpg`, n, el('span', { class: 'ph', style: `background-image:url("wallpapers/t-${id}.jpg")` })]),
+      ...Object.keys(PRESETS).filter(k => k !== 'auto').map(k => ['preset:' + k, { sunset: 'Dusk', forest: 'Moss' }[k] || k[0].toUpperCase() + k.slice(1), el('span', { class: 'ph', style: `background-image:${PRESETS[k]}` })])];
+    const msg = el('div', { class: 'hint', id: 'w-msg' }, isLocalWall(w) ? 'Using an uploaded image.' : '');
+    const url = el('input', { class: 'in', placeholder: '…or paste an image URL', value: w && !isLocalWall(w) && !w.startsWith('preset:') && !w.startsWith('wallpapers/') ? w : '', 'aria-label': 'Wallpaper URL' });
+    url.addEventListener('input', () => { const v = url.value.trim(); setKey('wall', v || undefined); });
+    return [
+      group('Wallpaper', pick(items, w, v => { setKey('wall', v); if (v?.startsWith('wallpapers/') && S().dim === undefined) setKey('dim', 25); }, 'c4')),
+      group('Your own image',
+        el('div', { class: 'btnrow' }, el('button', { class: 'btn sm', type: 'button', onclick: () => $('#wfile').click() }, 'Upload image…'),
+          el('button', { class: 'btn sm', type: 'button', onclick: () => { setKey('wall', ''); drawBody(); } }, 'Remove wallpaper')),
+        el('div', { style: 'height:8px' }), url, msg),
+      slider('wallBlur', 'Wallpaper blur', 0, 24, 0, 'px'),
+      slider('dim', 'Darken wallpaper', 0, 80, 0, '%'),
+    ];
+  },
+  parts() {
+    const s = S();
+    return [
+      group('Group navigation', seg('nav', [['sections', 'Sections'], ['tabs', 'Tabs'], ['sidebar', 'Sidebar']], 'sections'),
+        el('div', { class: 'hint', style: 'margin-top:8px' }, 'How groups are shown. Works with every layout.')),
+      group('Components',
+        el('div', { style: 'display:flex;flex-direction:column;gap:14px' },
+          toggle('featured', 'Featured banner'), toggle('newTab', 'Open links in a new tab'),
+          toggle('autoIcons', 'Look up app logos from names', true),
+          toggle('desc', 'Show descriptions', true), toggle('status', 'Show status dots', true))),
+      group('Recent row',
+        toggle('recent', 'Show the row'),
+        el('div', { style: 'height:12px' }), seg('recentBy', [['recent', 'Latest opened'], ['used', 'Most used']], 'recent'),
+        el('div', { style: 'height:8px' }), seg('recentPos', [['bottom', 'At the bottom'], ['top', 'At the top']], 'bottom'),
+        el('div', { class: 'hint', style: 'margin-top:8px' }, 'Based on what you open in this browser.')),
+      group('Screensaver',
+        selectIn('Style', [['', 'Off'], ['clock', 'Clock'], ['aurora', 'Aurora'], ['stars', 'Starfield'], ['photo', 'Wallpaper + clock']], s.ss || '', v => setKey('ss', v || undefined)),
+        el('div', { style: 'height:12px' }), slider('ssMin', 'Start after (minutes idle)', 1, 60, 5, ' min'),
+        el('button', { class: 'btn sm', type: 'button', onclick: () => startSS(S().ss || 'clock') }, 'Preview')),
+    ];
+  },
+  general() {
+    const s = S(), items = cfg.groups.flatMap(g => g.items);
+    return [
+      textIn('title', 'Page title', 'Toran'),
+      group('Weather', textIn('city', 'City', 'e.g. Pune', weatherSoon), el('div', { class: 'hint' }, 'Looked up in your browser via open-meteo.com. Leave empty for none.')),
+      group('Clock & units', el('div', { style: 'display:flex;flex-direction:column;gap:14px' }, toggle('clock24', '24-hour clock'), toggle('tempF', 'Temperature in °F'))),
+      selectIn('Featured service (banner)', [['', 'Auto: most recently opened'], ...items.map(i => [i.name, i.name])], s.featuredItem || '', v => setKey('featuredItem', v || undefined)),
+      api ? group('Backups', backupBox()) : null,
+      group('Data',
+        el('div', { class: 'btnrow' },
+          el('button', { class: 'btn sm', type: 'button', onclick: exportJson }, 'Export JSON'),
+          el('button', { class: 'btn sm', type: 'button', onclick: () => $('#file').click() }, 'Import JSON'),
+          el('button', { class: 'btn sm', type: 'button', onclick: reloadServer }, 'Reload from server'))),
+    ];
+  },
+};
+const TABS = [['look', 'Look'], ['bg', 'Background'], ['parts', 'Components'], ['general', 'General']];
+
+function drawBody() { const b = $('#drbody'); if (!b || drawerView !== 'settings') return; const keep = b.scrollTop; b.replaceChildren(...BODY[dTab]().filter(Boolean)); b.scrollTop = keep; }
+function drawSettings() {
+  $('#drawer').replaceChildren(
+    el('div', { class: 'dr-head' }, el('h3', {}, 'Appearance'), el('span', { class: 'hint', id: 'savestate' }),
+      el('button', { class: 'ib sm', type: 'button', title: 'Close', 'aria-label': 'Close', onclick: closeDrawer }, '✕')),
+    el('div', { class: 'dr-tabs' }, ...TABS.map(([k, l]) => el('button', { type: 'button', class: k === dTab ? 'on' : '', onclick: () => { dTab = k; drawSettings(); } }, l))),
+    el('div', { class: 'dr-body', id: 'drbody' }),
+    el('div', { class: 'dr-foot' },
+      el('button', { class: 'btn sm', type: 'button', onclick: () => { cfg.settings = structuredClone(snap || {}); applySettings(); render(); queueSave(); drawBody(); } }, 'Undo changes'),
+      el('span', { class: 'sp' }), el('button', { class: 'btn primary sm', type: 'button', onclick: closeDrawer }, 'Done')));
+  drawBody();
+}
+
+function drawService(group, item) {
+  const isNew = !item, d = $('#drawer');
+  const f = (label, attrs) => { const i = el('input', { class: 'in', ...attrs, 'aria-label': label }); return [i, el('div', { class: 'f' }, el('div', { class: 'lbl' }, label), i)]; };
+  const [name, nameF] = f('Name', { value: item?.name || '', placeholder: 'Jellyfin' });
+  const [url, urlF] = f('URL or port', { value: item?.url || '', placeholder: '8096  or  http://pi:8096' });
+  const [desc, descF] = f('Description (optional)', { value: item?.desc || '' });
+  const [grp, grpF] = f('Group', { value: group?.name || (activeGroup !== 'all' ? activeGroup : cfg.groups[0]?.name) || '', list: 'grplist' });
+  const [ico] = f('Icon', { value: item?.icon || '', placeholder: 'empty = auto' });
+  const prev = el('div', { class: 'ico', style: 'flex:none' });
+  const refreshIcon = () => { prev.style.setProperty('--h', hue(name.value || 'x')); fillIcon(prev, ico.value.trim(), name.value || '?'); };
+  ico.addEventListener('input', refreshIcon); name.addEventListener('input', refreshIcon); refreshIcon();
+  const icoF = el('div', { class: 'f' }, el('div', { class: 'lbl' }, 'Icon'), el('div', { style: 'display:flex;gap:10px;align-items:center' }, prev, ico),
+    el('div', { class: 'hint', style: 'margin-top:6px' }, 'Leave empty to find the app’s logo from its name. Or enter an emoji, an image URL, or a lowercase app name such as “home-assistant”.'));
+  const err = el('div', { class: 'hint', style: 'color:var(--bad)' });
+  const save = () => {
+    if (!name.value.trim() || !url.value.trim() || !grp.value.trim()) { err.textContent = 'Name, URL and group are required.'; return; }
+    const data = { name: name.value.trim(), url: url.value.trim(), desc: desc.value.trim(), icon: ico.value.trim() };
+    let g = cfg.groups.find(x => x.name === grp.value.trim());
+    if (item && group && g === group) Object.assign(item, data);
+    else {
+      if (item && group) group.items = group.items.filter(i => i !== item);
+      if (!g) { g = { name: grp.value.trim(), items: [] }; cfg.groups.push(g); }
+      g.items.push(data);
+    }
+    cfg.groups = cfg.groups.filter(x => x.items.length);
+    queueSave(); render(); checkAll(); closeDrawer();
+  };
+  d.replaceChildren(
+    el('div', { class: 'dr-head' }, el('h3', {}, isNew ? 'Add service' : 'Edit service'), el('span', { class: 'hint', id: 'savestate' }),
+      el('button', { class: 'ib sm', type: 'button', title: 'Close', 'aria-label': 'Close', onclick: closeDrawer }, '✕')),
+    el('div', { class: 'dr-body' }, nameF, urlF, el('div', { class: 'hint', style: 'margin-top:-12px' }, 'A bare port uses the same host you opened this page with.'),
+      descF, grpF, el('datalist', { id: 'grplist' }, ...cfg.groups.map(g => el('option', { value: g.name }))), icoF, err),
+    el('div', { class: 'dr-foot' },
+      !isNew ? el('button', { class: 'btn danger sm', type: 'button', onclick: () => {
+        group.items = group.items.filter(i => i !== item); cfg.groups = cfg.groups.filter(x => x.items.length); queueSave(); render(); closeDrawer(); } }, 'Delete') : null,
+      el('span', { class: 'sp' }), el('button', { class: 'btn sm', type: 'button', onclick: closeDrawer }, 'Cancel'),
+      el('button', { class: 'btn primary sm', type: 'button', onclick: save }, 'Save')));
+  name.focus();
+}
+
+function openDrawer(view, arg) {
+  if (view === 'settings' && drawerView !== 'settings') snap = structuredClone(cfg.settings || {});
+  drawerView = view;
+  const d = $('#drawer'); d.inert = false; d.classList.add('open'); document.body.classList.add('drawer-open');
+  if (view === 'service') drawService(arg.group, arg.item); else drawSettings();
+}
+async function closeDrawer() {
+  const d = $('#drawer'); d.classList.remove('open'); d.inert = true; document.body.classList.remove('drawer-open');
+  drawerView = null; snap = null; clearTimeout(saveTimer);
+  if (!dirty || await persist()) { for (const f of orphans) if (f !== cfg.settings?.wall) dropWall(f); orphans.clear(); }
+}
+
+/* data actions */
+function exportJson() {
+  const a = el('a', { href: URL.createObjectURL(new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' })), download: 'services.json' });
+  a.click(); URL.revokeObjectURL(a.href);
+}
+async function reloadFresh() {
+  try { localStorage.removeItem(KEY); } catch {}
+  cfg = migrate((await fromFile()) || structuredClone(DEFAULT)); applySettings(); render(); checkAll(); loadWeather(); drawBody();
+}
+async function reloadServer() {
+  if (!confirm('Discard unsaved changes in this browser and reload services.json from the server?')) return;
+  await reloadFresh();
+}
+
+/* backups (Go server): dated copies of services.json are kept automatically */
+function backupBox() {
+  const box = el('div', {}, el('div', { class: 'hint' }, 'Loading…'));
+  (async () => {
+    try {
+      const list = await (await fetch('api/backups', { cache: 'no-store' })).json();
+      box.replaceChildren(...(list.length ? list.slice(0, 6).map(b => el('div', { class: 'bkrow' },
+        el('span', {}, new Date(b.time).toLocaleString()),
+        el('button', { class: 'btn sm', type: 'button', onclick: () => restoreBackup(b.name) }, 'Restore')))
+        : [el('div', { class: 'hint' }, 'No backups yet. One is made automatically before your edits.')]));
+    } catch { box.replaceChildren(el('div', { class: 'hint' }, 'Could not load backups.')); }
+  })();
+  return box;
+}
+async function restoreBackup(name) {
+  if (!confirm('Restore this backup? Your current setup is backed up first, so this can be undone.')) return;
+  try {
+    const r = await fetch('api/backups/restore', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+    if (!r.ok) throw new Error(r.status);
+    await reloadFresh(); toast('Backup restored');
+  } catch { toast('Could not restore that backup', true); }
+}
+
+$('#file').onchange = async e => {
+  try { const j = JSON.parse(await e.target.files[0].text()); if (!Array.isArray(j.groups)) throw 0; cfg = migrate(j); applySettings(); render(); checkAll(); queueSave(); drawBody(); toast('Imported'); }
+  catch { toast('That file is not a valid services.json', true); }
+  e.target.value = '';
+};
+
+/* wallpaper upload: shrink in the browser (max 2200px JPEG) so the Pi stores a small file */
+async function prepWallpaper(file) {
+  const bmp = await createImageBitmap(file);
+  const k = Math.min(1, 2200 / Math.max(bmp.width, bmp.height));
+  const c = el('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  return new Promise(res => c.toBlob(res, 'image/jpeg', 0.85));
+}
+$('#wfile').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  const msg = $('#w-msg'); if (msg) msg.textContent = 'Uploading…';
+  try {
+    const path = `wallpaper/bg-${Date.now()}.jpg`;
+    const r = await fetch(path, { method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: await prepWallpaper(f) });
+    if (!r.ok) throw new Error(r.status);
+    setKey('wall', path); if (S().dim === undefined) setKey('dim', 25);
+    drawBody(); const m2 = $('#w-msg'); if (m2) m2.textContent = 'Uploaded.';
+  } catch { const m2 = $('#w-msg'); if (m2) m2.textContent = 'Upload failed. Is the folder writable and nginx.conf in place?'; }
+};
+
+/* ======================================================================
+   Top bar, search, keyboard
+   ====================================================================== */
+$('#btn-edit').append(icoEl('edit')); $('#btn-settings').append(icoEl('gear')); $('#btn-search').append(icoEl('search'));
+$('#btn-search').onclick = () => $('#q').focus();
+function setEditing(on) {
+  editing = on; document.body.classList.toggle('editing', on); $('#btn-edit').classList.toggle('on', on);
+  $('#btn-edit').setAttribute('aria-pressed', on); render();
+}
+$('#btn-edit').onclick = () => setEditing(!editing);
+$('#btn-done').onclick = () => setEditing(false);
+$('#btn-add').onclick = () => openDrawer('service', { group: null, item: null });
+$('#btn-settings').onclick = () => (drawerView === 'settings' ? closeDrawer() : openDrawer('settings'));
+
+const q = $('#q');
+q.addEventListener('input', () => { query = q.value; render(); });
+q.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const t = document.querySelector('.tile');
+    if (t && !editing) { if (cfg.settings?.newTab) window.open(t.href, '_blank', 'noopener'); else location.href = t.href; }
+  }
+  if (e.key === 'Escape') { q.value = ''; query = ''; render(); q.blur(); }
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && drawerView && !q.matches(':focus')) { closeDrawer(); return; }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const ae = document.activeElement, typing = /^(INPUT|TEXTAREA|SELECT)$/.test(ae?.tagName) || ae?.closest?.('#drawer');
+  if (!typing && (e.key === '/' || e.key.length === 1) && !drawerView) { q.focus(); if (e.key === '/') e.preventDefault(); }
+});
+/* arrow keys / remote: move between tiles in any layout */
+document.addEventListener('keydown', e => {
+  const dir = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+  if (!dir || editing || drawerView || document.querySelector('dialog[open]')) return;
+  const ae = document.activeElement;
+  if (ae?.tagName === 'INPUT' && !(e.key === 'ArrowDown' && ae.id === 'q')) return;
+  const NAV = '.tile,.hero,.rcard';
+  const tiles = [...document.querySelectorAll(NAV)]; if (!tiles.length) return;
+  e.preventDefault();
+  const cur = ae?.matches?.(NAV) ? ae : null;
+  if (!cur) { tiles[0].focus(); return; }
+  const a = cur.getBoundingClientRect(), ax = a.left + a.width / 2, ay = a.top + a.height / 2;
+  let best = null, bs = Infinity;
+  for (const t of tiles) {
+    if (t === cur) continue;
+    const b = t.getBoundingClientRect(), dx = b.left + b.width / 2 - ax, dy = b.top + b.height / 2 - ay;
+    const along = dx * dir[0] + dy * dir[1]; if (along <= 4) continue;
+    const score = along + (Math.abs(dx * dir[1]) + Math.abs(dy * dir[0])) * 2.5;
+    if (score < bs) { bs = score; best = t; }
+  }
+  if (best) best.focus({ preventScroll: true }), best.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+  else if (dir[1] === -1) q.focus();
+});
+
+/* ======================================================================
+   Screensaver (starts after N idle minutes; any input wakes it)
+   ====================================================================== */
+const ssEl = $('#ss');
+let lastAct = Date.now(), ssRaf = 0, ssTimer = 0, ssStart = 0;
+function ssTick() {
+  const d = new Date();
+  $('#ss-time').textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  $('#ss-date').textContent = d.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' });
+}
+function stars() {
+  const c = $('#ss-cv'), x = c.getContext('2d'); c.width = innerWidth; c.height = innerHeight;
+  const P = Array.from({ length: 140 }, () => ({ x: Math.random() * 2 - 1, y: Math.random() * 2 - 1, z: Math.random() }));
+  x.fillStyle = '#000'; x.fillRect(0, 0, c.width, c.height);
+  const loop = () => {
+    x.fillStyle = 'rgba(0,0,0,.35)'; x.fillRect(0, 0, c.width, c.height);
+    for (const s of P) {
+      s.z -= 0.004; if (s.z <= 0) { s.x = Math.random() * 2 - 1; s.y = Math.random() * 2 - 1; s.z = 1; }
+      const k = 1 / s.z, r = Math.max(0.5, (1 - s.z) * 2.2);
+      x.fillStyle = '#fff'; x.fillRect(c.width / 2 + s.x * k * c.width / 4, c.height / 2 + s.y * k * c.height / 4, r, r);
+    }
+    ssRaf = requestAnimationFrame(loop);
+  };
+  loop();
+}
+function startSS(style) {
+  style = style || cfg.settings?.ss; if (!style || ssEl.open) return;
+  ssEl.dataset.style = style;
+  ssEl.style.backgroundImage = style === 'photo' ? wallCss(cfg.settings?.wall) : '';
+  ssStart = Date.now(); ssEl.showModal(); ssTick(); ssTimer = setInterval(ssTick, 5000);
+  if (style === 'stars') stars();
+}
+ssEl.addEventListener('close', () => { cancelAnimationFrame(ssRaf); clearInterval(ssTimer); lastAct = Date.now(); });
+['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart'].forEach(ev => addEventListener(ev, () => {
+  lastAct = Date.now();
+  if (ssEl.open && Date.now() - ssStart > 800) ssEl.close();
+}, { passive: true }));
+setInterval(() => {
+  const s = cfg?.settings; if (!s?.ss || ssEl.open) return;
+  if (Date.now() - lastAct > (s.ssMin || 5) * 60000) startSS();
+}, 5000);
+
+/* ======================================================================
+   Boot
+   ====================================================================== */
+(async () => {
+  $('#drawer').inert = true;
+  cfg = await load(); await detectApi();
+  applySettings(); render(); tick(); checkAll(); loadWeather();
+  requestAnimationFrame(() => requestAnimationFrame(() => document.documentElement.classList.remove('boot')));
+  setInterval(tick, 20000); setInterval(checkAll, 60000); setInterval(loadWeather, 30 * 60000);
+})();
+</script>
+</body>
+</html>
