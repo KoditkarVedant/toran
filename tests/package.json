@@ -1,0 +1,11 @@
+{
+    "private":  true,
+    "devDependencies":  {
+                            "jsdom":  "^31.0.1"
+                        },
+    "description":  "Simulated-browser tests for the Toran page",
+    "name":  "toran-tests",
+    "scripts":  {
+                    "test":  "node page.test.js \u0026\u0026 node page-with-server.test.js"
+                }
+}
