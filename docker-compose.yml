@@ -2,11 +2,15 @@
 # 8080 taken? TORAN_PORT=9090 docker compose up --build
 # Data (services.json, backups, uploads) is kept in ./.data, which git ignores.
 # To run the published image instead of building: replace "build: ." with "image: YOURUSER/toran:latest".
+# The container runs as user 65532, not root. On Linux, ./.data must belong to that user:
+#   mkdir -p .data && sudo chown 65532:65532 .data      (or uncomment "user:" below to use your own id)
+# Docker Desktop on Windows and macOS needs nothing.
 services:
   toran:
     build: .
     container_name: toran
     restart: unless-stopped
+    # user: "${UID:-1000}:${GID:-1000}"   # Linux: run as your own user instead of 65532 (then ./.data is yours)
     ports:
       - "${TORAN_PORT:-8080}:8080"
     volumes:

@@ -3,6 +3,15 @@
 # but never touch the user's own data: services.json, backups/, wallpaper/, icons/.
 set -e
 mkdir -p "$ROOT"
+# The server runs as an ordinary user. A volume made by an older image, or a folder made by Docker
+# for a bind mount, can belong to root; say so plainly instead of failing on the first copy.
+if ! ( : > "$ROOT/.write-test" ) 2>/dev/null; then
+  echo "toran: cannot write to $ROOT as user $(id -u):$(id -g)." >&2
+  echo "toran: give that user the folder once, e.g.  docker run --rm -v <your volume or folder>:/data --user 0 --entrypoint chown <this image> -R $(id -u):$(id -g) /data" >&2
+  echo "toran: or run the container as the folder's owner with  --user <uid>:<gid>  (see docs/deploy.md)." >&2
+  exit 1
+fi
+rm -f "$ROOT/.write-test"
 cp /opt/toran/index.html /opt/toran/custom.css "$ROOT"/
 cp -r /opt/toran/wallpapers "$ROOT"/
 [ -f "$ROOT/services.json" ] || cp /opt/toran/services.sample.json "$ROOT/services.json"
