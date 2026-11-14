@@ -1,4 +1,5 @@
 # Local use: docker compose up --build   then open http://localhost:8080
+# 8080 taken? TORAN_PORT=9090 docker compose up --build
 # Data (services.json, backups, uploads) is kept in ./.data, which git ignores.
 # To run the published image instead of building: replace "build: ." with "image: YOURUSER/toran:latest".
 services:
@@ -7,7 +8,7 @@ services:
     container_name: toran
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "${TORAN_PORT:-8080}:8080"
     volumes:
       - ./.data:/data
     environment:

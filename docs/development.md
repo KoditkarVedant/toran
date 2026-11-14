@@ -23,9 +23,9 @@ The server tests cover config saving, backups and restore, upload validation, th
 ## Run it locally
 
 ```powershell
-.\dev.ps1            # http://localhost:8080
+.\dev.ps1            # http://localhost:8787
 .\dev.ps1 -Test      # run the page tests and the server checks first
-.\dev.ps1 -Port 9090
+.\dev.ps1 -Port 9090   # if 8787 is taken
 ```
 
 This runs the real Go server against this folder. Edit `index.html` and refresh the browser; the server reads it from disk on every request. A `services.json` created here is ignored by git.
