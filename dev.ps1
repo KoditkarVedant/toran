@@ -13,6 +13,12 @@ $goImage = 'golang:1.24-alpine'   # keep in step with the builder image in the D
 
 if ($Docker -and -not (Get-Command docker -ErrorAction SilentlyContinue)) { throw 'docker was not found. Install Docker Desktop, or run without -Docker.' }
 
+# The dev container has a fixed name so it can be stopped reliably. Ctrl+C ends the docker
+# command in this window but not always the container, which would keep the port taken.
+$devName = "toran-dev-$Port"
+function Stop-DevContainer { if (docker ps -aq --filter "name=^$devName$") { docker rm -f $devName | Out-Null } }
+if ($Docker) { Stop-DevContainer }   # a leftover from an earlier run
+
 # Run a shell command in the Go container with the repo mounted at /app.
 # The Go build cache is kept in a volume, so only the first run is slow.
 function Invoke-InGo([string]$Script, [string[]]$Extra = @()) {
@@ -38,7 +44,8 @@ if (Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyCon
 
 Write-Host "Toran on http://localhost:$Port  (Ctrl+C to stop)"
 if ($Docker) {
-  $null = Invoke-InGo 'exec go run .' @('-p', "${Port}:8080", '-e', 'ROOT=/app', '-e', 'ADDR=:8080')
+  try { $null = Invoke-InGo 'exec go run .' @('--name', $devName, '-p', "${Port}:8080", '-e', 'ROOT=/app', '-e', 'ADDR=:8080') }
+  finally { Stop-DevContainer }
   return
 }
 
