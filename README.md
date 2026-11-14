@@ -34,7 +34,7 @@ Details: [docs/deploy.md](docs/deploy.md).
 
 ## Security
 
-There is **no login yet**. Saving is limited to private-network clients by default (`LAN_ONLY`), but anyone on your network can change the page. Do not expose it to the internet. See [docs/configuration.md](docs/configuration.md).
+There is **no login yet**. By default only private-network clients can save changes (`LAN_ONLY`), another website cannot make your browser change the page, the status checker stays away from cloud-metadata addresses, the pages carry security headers, and the Docker image runs as an ordinary user. But anyone on your network can still change the page, so do not expose it to the internet. Behind a reverse proxy, set `TRUSTED_PROXIES` and, if needed, `TRUSTED_ORIGINS`. See [docs/configuration.md](docs/configuration.md#security) and [SECURITY.md](SECURITY.md).
 
 ## Repository layout
 
@@ -49,6 +49,7 @@ There is **no login yet**. Saving is limited to private-network clients by defau
 | `Dockerfile`, `docker/`, `docker-compose.yml` | The multi-arch image and its local compose file |
 | `docker-compose.dev.yml`, `publish.ps1` | Run it locally from this folder; build and push the image to Docker Hub |
 | `docs/` | Documentation site source |
+| `SECURITY.md`, `CHANGELOG.md` | How to report a problem; what changed in each release |
 
 ## Credits
 
