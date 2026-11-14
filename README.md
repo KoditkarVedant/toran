@@ -4,7 +4,7 @@ A fast, good-looking start page for your home server. One tile per service, so y
 
 *Toran* is the ceremonial arched gateway at the entrance of an Indian home or temple. This is the gateway to your self-hosted apps.
 
-> **Status: pre-release (0.1.x).** The page is tested in a simulated browser and the Go server has unit tests, which pass. It has not been run on a real Pi yet, so treat the first deploy as the first test. Expect changes between releases.
+> **Status: pre-release.** The page is tested in a simulated browser and in headless Chromium against the real server, and the Go server has unit tests, which pass. It has not been run on a real Pi yet, so treat the first deploy as the first test. Expect changes between releases.
 
 ## What it does
 
@@ -32,9 +32,11 @@ Then open `http://<host>:8080`. Build and publish your own image with `publish.p
 
 Details: [docs/deploy.md](docs/deploy.md).
 
-## Security
+## Accounts and security
 
-There is **no login yet**. By default only private-network clients can save changes (`LAN_ONLY`), another website cannot make your browser change the page, the status checker stays away from cloud-metadata addresses, the pages carry security headers, and the Docker image runs as an ordinary user. But anyone on your network can still change the page, so do not expose it to the internet. If you reach it by a host name, set `ALLOWED_HOSTS` (it stops DNS rebinding). Behind a reverse proxy, set `TRUSTED_PROXIES` and, if needed, `TRUSTED_ORIGINS`. See [docs/configuration.md](docs/configuration.md#security) and [SECURITY.md](SECURITY.md).
+Toran has **accounts**: the first time it starts, the page asks you to create the administrator (the setup code is in the server log: `docker logs toran`), and every user then has their own dashboard. Admins add and manage users in the account menu; a forgotten password is reset on the server with `docker exec -it toran toran reset-password NAME`. See [docs/configuration.md](docs/configuration.md#accounts-and-logging-in).
+
+Besides the login: by default only private-network clients can save changes (`LAN_ONLY`), another website cannot make your browser change the page, the status checker stays away from cloud-metadata addresses, the pages carry security headers, and the Docker image runs as an ordinary user. But anyone on your network can still change the page, so do not expose it to the internet. If you reach it by a host name, set `ALLOWED_HOSTS` (it stops DNS rebinding). Behind a reverse proxy, set `TRUSTED_PROXIES` and, if needed, `TRUSTED_ORIGINS`. See [docs/configuration.md](docs/configuration.md#security) and [SECURITY.md](SECURITY.md).
 
 ## Repository layout
 

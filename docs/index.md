@@ -12,8 +12,8 @@ A fast, good-looking start page for your home server. One tile per service, so y
 
 ## Status
 
-Pre-release. The page is tested in a simulated browser. The Go server has unit tests that have not been run yet, and it has not been run on real hardware.
+Pre-release. The page is tested in a simulated browser and in headless Chromium against the real server, and the server has unit tests. It has not been run on real Raspberry Pi hardware, or in GitHub Actions, yet.
 
 ## Security in one paragraph
 
-There is no login yet. Saving is limited to private-network clients, but anyone on your network can change the page, so keep it off the internet.
+Toran has accounts: everyone logs in and has their own dashboard ([Accounts and logging in](configuration.md#accounts-and-logging-in)). It does not encrypt traffic, so put an HTTPS proxy in front of it before exposing it beyond your home network.

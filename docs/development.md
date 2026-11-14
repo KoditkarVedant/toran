@@ -3,8 +3,8 @@
 ## Layout
 
 - `index.html` is the whole page: HTML, CSS and JavaScript in one file, no build step, no dependencies.
-- `server/` is the Go server (standard library only), split by job: `server.go` (type and settings), `access.go` (who may write), `config.go` and `backups.go` (`services.json`), `uploads.go`, `static.go`, `status.go`, `httpx.go` (helpers), `main.go` (startup). `main_test.go` tests it.
-- `tests/` holds simulated-browser tests for the page (jsdom).
+- `server/` is the Go server (standard library only), split by job: `server.go` (type and settings), `access.go` (who may write: `LAN_ONLY`), `proxy.go`, `origin.go`, `hosts.go` and `headers.go` (the network-level protections), the accounts (`password.go`, `users.go`, `session.go`, `throttle.go`, `auth.go`, `usersapi.go`, `cli.go`), `dashboard.go` and `legacy.go` (one dashboard per user, and taking over an old single-user install), `config.go` and `backups.go` (`services.json`), `uploads.go`, `static.go`, `status.go`, `safedial.go`, `httpx.go` (helpers) and `main.go` (routes and startup). Each has a `_test.go` beside it.
+- `tests/` holds simulated-browser tests for the page (jsdom): the page itself, the page with a fake server, and the login and user screens (`page-accounts.test.js`).
 
 Build and run the server as a package, not a single file: `go run .`, not `go run main.go`.
 

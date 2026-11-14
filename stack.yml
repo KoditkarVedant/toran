@@ -1,6 +1,7 @@
 # Portainer: Stacks -> Add stack -> Web editor -> paste this -> Deploy the stack.
 # First copy the contents of the "deploy" folder to /srv/toran on the Pi.
-# Then open http://<your-pi>:8080
+# Then open http://<your-pi>:8080. The first time, the page asks you to create the admin account;
+# the setup code is in this container's log (Portainer: Containers -> toran -> Logs).
 services:
   toran:
     image: alpine:3                    # just a tiny base; the app is the binary in /srv/toran/bin
@@ -9,7 +10,7 @@ services:
     network_mode: host                 # lets the server check your services on localhost and see real client IPs
     working_dir: /app
     volumes:
-      - /srv/toran:/app              # page, services.json, backups, wallpapers, icons all live here
+      - /srv/toran:/app              # the page, the accounts (users.json, secret.key) and every user's data live here
     environment:
       ADDR: ":8080"                    # port the page is served on
       ROOT: /app

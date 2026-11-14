@@ -10,6 +10,9 @@
 /backups/
 /wallpaper/
 /icons/
+/users/
+/users.json
+/secret.key
 
 # misc
 .tmp-*
