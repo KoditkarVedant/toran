@@ -40,13 +40,39 @@ To try the Docker image instead: `docker compose up --build`, then open `http://
 
 ```powershell
 docker login
-.\publish.ps1 -Image youruser/toran -Version 1.0
+.\publish.ps1 -Image youruser/toran -Version 0.1.0
 ```
 
-This vets and tests the server, then builds one multi-arch image (`linux/amd64`, `linux/arm64`, `linux/arm/v7`) and pushes it as `:1.0` and `:latest`. Add `-NoPush` to build without pushing, which checks the Dockerfile. See [Deploy](deploy.md#run-the-docker-image).
+This vets and tests the server, then builds one multi-arch image (`linux/amd64`, `linux/arm64`, `linux/arm/v7`) and pushes it as `:0.1.0` and `:latest`. Add `-NoPush` to build without pushing, which checks the Dockerfile. See [Deploy](deploy.md#run-the-docker-image).
 
 ## Conventions
 
 - Small, focused commits with an imperative subject (`feat:`, `fix:`, `docs:`, `test:`, `build:`, `chore:`).
 - Keep the page dependency-free and the server standard-library-only; the footprint is a feature.
 - User data (`services.json`, `backups/`, uploads) is never committed.
+
+## Releases and CI
+
+Every pull request runs `.github/workflows/ci.yml`: gofmt, `go vet`, `go test -race`, `govulncheck`, the page tests, and a build of the multi-arch image (no push).
+
+`.github/workflows/release.yml` publishes:
+
+| Trigger | Result |
+|---|---|
+| Push to `main` (after CI passes) | Image `ghcr.io/<owner>/toran:edge` |
+| Tag `v0.2.0` | Images `:0.2.0`, `:0.2` and `:latest`, and a GitHub Release with the Pi binaries (`toran-aarch64`, `-armv7l`, `-armv6l`, `-x86_64`), `SHA256SUMS` and the page files |
+| Tag `v0.2.0-rc.1` | Image `:0.2.0-rc.1` and a GitHub prerelease; never `:latest` |
+
+To cut a release: move the `[Unreleased]` notes in `CHANGELOG.md` under the new version, commit, then
+
+```sh
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+The version number comes from the tag. It is passed to the build with `-ldflags "-X main.version=..."` and shows up in `GET /api/health`. The `0.1.0` in the source is only the fallback for a plain `go build`.
+
+**Docker Hub (optional).** Images always go to GitHub Container Registry using the built-in `GITHUB_TOKEN`. To also push to Docker Hub, add the repository variable `DOCKERHUB_IMAGE` (for example `youruser/toran`) and the secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`.
+
+**First time on GitHub.** Under *Settings → Actions → General → Workflow permissions* leave the default read-only setting; the workflows ask for the extra permissions they need. After the first image is pushed, make the package public under the repository's *Packages* if you want others to pull it.
+
