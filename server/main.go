@@ -28,13 +28,18 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("POST /api/login", s.login)
 	mux.HandleFunc("POST /api/logout", s.logout)
 	mux.HandleFunc("POST /api/password", s.authed(s.changePassword))
-	mux.HandleFunc("GET /api/status", s.status)
-	mux.HandleFunc("GET /api/backups", s.dash.listBackups)
-	mux.HandleFunc("POST /api/backups/restore", s.guard(s.dash.restore))
-	mux.HandleFunc("PUT /services.json", s.guard(s.dash.putConfig))
-	mux.HandleFunc("PUT /wallpaper/{name}", s.putFile("wallpaper", 12<<20, ".jpg", ".jpeg", ".png", ".webp"))
-	mux.HandleFunc("DELETE /wallpaper/{name}", s.delFile("wallpaper"))
-	mux.HandleFunc("PUT /icons/{name}", s.putFile("icons", 2<<20, ".svg", ".png", ".webp"))
+	// Everything below needs a logged-in user. Writes also need LAN_ONLY clearance (guard).
+	mux.HandleFunc("GET /api/status", s.authed(s.status))
+	mux.HandleFunc("GET /api/backups", s.forUser((*dashboard).listBackups))
+	mux.HandleFunc("POST /api/backups/restore", s.guard(s.forUser((*dashboard).restore)))
+	mux.HandleFunc("GET /services.json", s.forUser((*dashboard).getConfig))
+	mux.HandleFunc("PUT /services.json", s.guard(s.forUser((*dashboard).putConfig)))
+	mux.HandleFunc("GET /wallpaper/{name}", s.getFile(s.wallpaperDirOf))
+	mux.HandleFunc("PUT /wallpaper/{name}", s.putFile(s.wallpaperDirOf, 12<<20, ".jpg", ".jpeg", ".png", ".webp"))
+	mux.HandleFunc("DELETE /wallpaper/{name}", s.delFile(s.wallpaperDirOf))
+	mux.HandleFunc("GET /icons/{name}", s.getFile(s.iconDirOf))
+	mux.HandleFunc("PUT /icons/{name}", s.putFile(s.iconDirOf, 2<<20, ".svg", ".png", ".webp"))
+	// The page itself and the bundled wallpapers are public: the page has to load to show the login form.
 	mux.HandleFunc("GET /", s.static)
 	// Outermost layers, so no route can skip them: the headers go on every answer, including a
 	// refusal from the host or cross-site checks.

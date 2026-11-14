@@ -18,7 +18,7 @@ const (
 
 func newAuthTestN(t *testing.T, iterations int) (*server, http.Handler) {
 	t.Helper()
-	s, _, _ := newTest(t)
+	s := newBare(t)
 	if err := s.initAuth(authConfig{iterations: iterations, life: 30 * 24 * time.Hour, setupCode: setupCodeForTests}); err != nil {
 		t.Fatal(err)
 	}
@@ -455,7 +455,7 @@ func TestBadBodies(t *testing.T) {
 }
 
 func TestSetupCodeIsMadeWhenMissing(t *testing.T) {
-	s, _, _ := newTest(t)
+	s := newBare(t)
 	if err := s.initAuth(authConfig{iterations: testIterations, life: time.Hour}); err != nil { // no fixed code
 		t.Fatal(err)
 	}

@@ -281,6 +281,7 @@ func (s *server) setup(w http.ResponseWriter, r *http.Request) {
 	}
 	s.setupCode = ""
 	log.Printf("first admin %q created", u.Name)
+	s.adoptLegacyData(u) // an earlier single-user dashboard becomes theirs
 	s.setSessionCookie(w, r, s.sessions.issue(u))
 	writeJSON(w, 200, map[string]any{"user": u.public()})
 }

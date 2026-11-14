@@ -58,12 +58,12 @@ func TestCrossOriginWrites(t *testing.T) {
 }
 
 func TestBlockedWriteChangesNothing(t *testing.T) {
-	_, h, dir := newTest(t)
+	s, h, _ := newTest(t)
 	r := doWith(h, "PUT", "/services.json", lan, []byte(`{"groups":[]}`), map[string]string{"Sec-Fetch-Site": "cross-site"})
 	if r.Code != 403 {
 		t.Fatalf("want 403, got %d", r.Code)
 	}
-	if _, err := os.ReadFile(filepath.Join(dir, "services.json")); err == nil {
+	if _, err := os.ReadFile(filepath.Join(testUserDir(s), "services.json")); err == nil {
 		t.Error("a blocked request must not write the config")
 	}
 	if !strings.Contains(r.Body.String(), "TRUSTED_ORIGINS") {

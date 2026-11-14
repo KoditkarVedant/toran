@@ -76,8 +76,10 @@ func (s *server) checkOne(u string) check {
 	return check{State: state, Code: resp.StatusCode, MS: ms}
 }
 
-func (s *server) status(w http.ResponseWriter, r *http.Request) {
-	urls := s.dash.configURLs()
+// status checks the services in the logged-in user's own config. The results are cached for a few
+// seconds by address, so two users listing the same service share one check.
+func (s *server) status(w http.ResponseWriter, r *http.Request, who user) {
+	urls := s.dashboardFor(who).configURLs()
 	out := make(map[string]check, len(urls))
 	var stale []string
 	s.stMu.Lock()

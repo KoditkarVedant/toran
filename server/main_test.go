@@ -12,14 +12,57 @@ import (
 	"time"
 )
 
-func newTest(t *testing.T) (*server, http.Handler, string) {
+// newBare is a server with LAN_ONLY on and no accounts feature started yet.
+func newBare(t *testing.T) *server {
 	t.Helper()
-	dir := t.TempDir()
-	s := newServer(dir)
+	s := newServer(t.TempDir())
 	s.lanOnly = true
 	s.backupEvery = 0 // back up on every change in tests
-	return s, s.routes(), dir
+	return s
 }
+
+const testUserName = "tester"
+
+// newTest is a server with accounts started and one admin, "tester". The returned handler logs
+// every request in as tester unless it carries its own Cookie header or an X-Test-Anon header,
+// so tests of the dashboard routes need not log in each time. The third value is the data folder
+// (ROOT); the tester's own files are in testUserDir(s).
+func newTest(t *testing.T) (*server, http.Handler, string) {
+	t.Helper()
+	s := newBare(t)
+	if err := s.initAuth(authConfig{iterations: testIterations, life: 30 * 24 * time.Hour, setupCode: setupCodeForTests}); err != nil {
+		t.Fatal(err)
+	}
+	hash, err := hashPassword(goodPassword, testIterations)
+	if err != nil {
+		t.Fatal(err)
+	}
+	u, err := s.accounts.create(testUserName, roleAdmin, hash)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return s, loggedIn{s.routes(), s.sessions.issue(u)}, s.root
+}
+
+// loggedIn adds the tester's session cookie to requests that have no cookie of their own.
+type loggedIn struct {
+	next   http.Handler
+	cookie string
+}
+
+func (l loggedIn) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("Cookie") == "" && r.Header.Get("X-Test-Anon") == "" {
+		r.AddCookie(&http.Cookie{Name: sessionCookie, Value: l.cookie})
+	}
+	l.next.ServeHTTP(w, r)
+}
+
+func testUser(s *server) user {
+	u, _ := s.accounts.byName(testUserName)
+	return u
+}
+func testUserDir(s *server) string       { return s.userDir(testUser(s)) }
+func testDashboard(s *server) *dashboard { return s.dashboardFor(testUser(s)) }
 
 func do(h http.Handler, method, target, remote string, body []byte) *httptest.ResponseRecorder {
 	return doWith(h, method, target, remote, body, nil)
@@ -46,7 +89,8 @@ const lan = "192.168.1.20:5555"
 var png1x1 = []byte("\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDATx\x9cc\xf8\xff\xff?\x00\x05\xfe\x02\xfe\xa7\x9a\xa0\xa1\x00\x00\x00\x00IEND\xaeB`\x82")
 
 func TestConfigSaveBackupRestore(t *testing.T) {
-	_, h, dir := newTest(t)
+	s, h, _ := newTest(t)
+	dir := testUserDir(s)
 	v1 := []byte(`{"groups":[{"name":"A","items":[]}]}`)
 	v2 := []byte(`{"groups":[{"name":"B","items":[]}]}`)
 
@@ -118,7 +162,7 @@ func TestBackupPruning(t *testing.T) {
 		do(h, "PUT", "/services.json", lan, body)
 		time.Sleep(3 * time.Millisecond)
 	}
-	if n := len(s.dash.backupNames()); n != 3 {
+	if n := len(testDashboard(s).backupNames()); n != 3 {
 		t.Fatalf("want 3 backups kept, got %d (%s)", n, dir)
 	}
 }
@@ -145,7 +189,8 @@ func TestLanOnlyWrites(t *testing.T) {
 }
 
 func TestUploads(t *testing.T) {
-	_, h, dir := newTest(t)
+	s, h, _ := newTest(t)
+	dir := testUserDir(s)
 	if r := do(h, "PUT", "/wallpaper/bg-1.jpg", lan, png1x1); r.Code != 204 {
 		t.Fatalf("upload: %d %s", r.Code, r.Body)
 	}
@@ -191,14 +236,15 @@ func TestUploads(t *testing.T) {
 }
 
 func TestStaticAllowList(t *testing.T) {
-	_, h, dir := newTest(t)
+	s, h, dir := newTest(t)
 	write := func(rel, content string) {
 		p := filepath.Join(dir, rel)
 		_ = os.MkdirAll(filepath.Dir(p), 0o755)
 		_ = os.WriteFile(p, []byte(content), 0o644)
 	}
 	write("index.html", "<html>hi</html>")
-	write("services.json", `{"groups":[]}`)
+	write("services.json", `{"groups":["the old single-user file"]}`) // no longer served
+	write("users/"+testUser(s).ID+"/services.json", `{"groups":[]}`)
 	write("custom.css", "a{}")
 	write("wallpapers/a.jpg", "x")
 	write("backups/services-20240101-000000-000.json", `{"groups":[]}`)
@@ -211,6 +257,9 @@ func TestStaticAllowList(t *testing.T) {
 		if r := do(h, "GET", p, lan, nil); r.Code != 200 {
 			t.Errorf("GET %s: want 200, got %d", p, r.Code)
 		}
+	}
+	if r := do(h, "GET", "/services.json", lan, nil); strings.Contains(r.Body.String(), "old single-user") {
+		t.Error("services.json must come from the user's own folder, not from ROOT")
 	}
 	if r := do(h, "GET", "/index.html", lan, nil); r.Header().Get("Cache-Control") != "no-cache" {
 		t.Errorf("html must revalidate, got %q", r.Header().Get("Cache-Control"))
@@ -233,7 +282,8 @@ func TestStatusChecks(t *testing.T) {
 	defer up.Close()
 	bad := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(502) }))
 	defer bad.Close()
-	s, h, dir := newTest(t)
+	s, h, _ := newTest(t)
+	dir := testUserDir(s)
 	s.checkHost = "127.0.0.1"
 	port := func(u string) string { return u[strings.LastIndex(u, ":"):] }
 	cfg := map[string]any{"groups": []any{map[string]any{"name": "g", "items": []any{
@@ -243,7 +293,10 @@ func TestStatusChecks(t *testing.T) {
 		map[string]string{"name": "dup", "url": port(up.URL)},
 	}}}}
 	b, _ := json.Marshal(cfg)
-	_ = os.WriteFile(filepath.Join(dir, "services.json"), b, 0o644)
+	_ = os.MkdirAll(dir, 0o755)
+	if err := os.WriteFile(filepath.Join(dir, "services.json"), b, 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	r := do(h, "GET", "/api/status", lan, nil)
 	var res map[string]check

@@ -1,6 +1,8 @@
 package main
 
-// Static files, served from an allow-list only.
+// Static files, served from an allow-list only: the page itself and what it needs before
+// anyone has logged in. Everything that belongs to a person (services.json, wallpapers, icons) is
+// served by authenticated routes instead (dashboard.go, uploads.go).
 
 import (
 	"net/http"
@@ -10,8 +12,11 @@ import (
 	"strings"
 )
 
-var staticFiles = map[string]bool{"/index.html": true, "/custom.css": true, "/services.json": true, "/favicon.ico": true}
-var staticDirs = []string{"/wallpapers/", "/wallpaper/", "/icons/"}
+var staticFiles = map[string]bool{"/index.html": true, "/custom.css": true, "/favicon.ico": true}
+var staticDirs = []string{"/wallpapers/"} // the wallpapers that ship with Toran
+
+// imageCSP is sent with every image that was shipped or uploaded: it may be drawn but never run.
+const imageCSP = "default-src 'none'; style-src 'unsafe-inline'; sandbox"
 
 func (s *server) static(w http.ResponseWriter, r *http.Request) {
 	p := path.Clean("/" + r.URL.Path)
@@ -39,10 +44,10 @@ func (s *server) static(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	if dir { // uploaded or bundled images: cacheable, and never allowed to run script even if opened directly
+	if dir { // bundled images: cacheable, and never allowed to run script even if opened directly
 		w.Header().Set("Cache-Control", "public, max-age=86400")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
-		w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox")
+		w.Header().Set("Content-Security-Policy", imageCSP)
 	} else {
 		w.Header().Set("Cache-Control", "no-cache")
 	}

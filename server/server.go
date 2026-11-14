@@ -39,7 +39,8 @@ type server struct {
 	setupMu    sync.Mutex
 	setupCode  string // first-run code, empty once an admin exists
 
-	dash *dashboard // the one shared dashboard (per-user dashboards replace this when logins arrive)
+	dashMu     sync.Mutex
+	dashboards map[string]*dashboard // one per user id, created on first use (dashboard.go)
 
 	checkHost string // host used for bare-port status checks (127.0.0.1 with host networking)
 	stMu      sync.Mutex
@@ -59,14 +60,14 @@ func newServer(root string) *server {
 	s := &server{
 		root: root, lanOnly: envOr("LAN_ONLY", "true") != "false", origin: newOriginGuard(),
 		maxBackups: 30, backupEvery: 10 * time.Minute,
-		checkHost: envOr("CHECK_HOST", "127.0.0.1"), stCache: map[string]check{}, stTTL: 15 * time.Second,
+		dashboards: map[string]*dashboard{},
+		checkHost:  envOr("CHECK_HOST", "127.0.0.1"), stCache: map[string]check{}, stTTL: 15 * time.Second,
 		client: &http.Client{
 			Timeout:       2500 * time.Millisecond,
 			CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
 			Transport:     newCheckTransport(), // see safedial.go
 		},
 	}
-	s.dash = s.newDashboard(root)
 	return s
 }
 
