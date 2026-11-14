@@ -9,6 +9,7 @@ can change between releases, including the config format and the API.
 - Saving and uploading are now refused when a request comes from another website (cross-site request protection). Set `TRUSTED_ORIGINS` if a reverse proxy changes the `Host` header.
 - New `TRUSTED_PROXIES` setting: behind a reverse proxy, `LAN_ONLY` now judges the visitor (from `X-Forwarded-For`, read from the right, only from listed proxies) instead of the proxy.
 - The server-side status checker refuses link-local (cloud metadata), unspecified and multicast addresses, follows no redirects and only checks `http` and `https` addresses.
+- Security headers on every response: a Content-Security-Policy (no framing, no plugins, fixed `<base>` and form targets), `X-Frame-Options`, `nosniff`, `Referrer-Policy` and `Permissions-Policy`.
 
 ## [0.1.0]
 

@@ -8,7 +8,7 @@
 // Settings come from environment variables (see envOr calls). No third-party packages.
 //
 // Layout: server.go (type + settings), access.go (who may write), proxy.go (visitor address
-// behind a proxy), origin.go (cross-site protection), config.go and backups.go (services.json), uploads.go, static.go, status.go,
+// behind a proxy), origin.go (cross-site protection), headers.go (security headers), config.go and backups.go (services.json), uploads.go, static.go, status.go,
 // httpx.go (helpers).
 package main
 
@@ -30,7 +30,9 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("DELETE /wallpaper/{name}", s.delFile("wallpaper"))
 	mux.HandleFunc("PUT /icons/{name}", s.putFile("icons", 2<<20, ".svg", ".png", ".webp"))
 	mux.HandleFunc("GET /", s.static)
-	return s.origin.Handler(mux) // outermost, so no route can skip the cross-site check
+	// Outermost layers, so no route can skip them: the headers go on every answer, including a
+	// refusal from the cross-site check.
+	return securityHeaders(s.origin.Handler(mux))
 }
 
 func main() {
