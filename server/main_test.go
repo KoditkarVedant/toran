@@ -206,8 +206,12 @@ func TestStaticAllowList(t *testing.T) {
 	bad := []string{"/backups/services-20240101-000000-000.json", "/bin/toran-x86_64", "/secrets.txt", "/.env", "/../secrets.txt",
 		"/wallpapers/../secrets.txt", "/wallpapers/", "/icons/missing.svg", "/%2e%2e/secrets.txt", "/wallpapers/%2e%2e/%2e%2e/secrets.txt"}
 	for _, p := range bad {
-		if r := do(h, "GET", p, lan, nil); r.Code != 404 {
-			t.Errorf("GET %s should be 404, got %d", p, r.Code)
+		r := do(h, "GET", p, lan, nil)
+		if r.Code >= 300 && r.Code < 400 { // ServeMux redirects unclean paths (301 or 307 by Go version); the cleaned target must not serve the file
+			r = do(h, "GET", r.Header().Get("Location"), lan, nil)
+		}
+		if r.Code != 404 {
+			t.Errorf("GET %s should end in 404, got %d", p, r.Code)
 		}
 	}
 }
