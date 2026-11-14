@@ -26,9 +26,12 @@ The server tests cover config saving, backups and restore, upload validation, th
 .\dev.ps1            # http://localhost:8787
 .\dev.ps1 -Test      # run the page tests and the server checks first
 .\dev.ps1 -Port 9090   # if 8787 is taken
+.\dev.ps1 -Docker     # run the Go server in a container instead (see below)
 ```
 
 This runs the real Go server against this folder. Edit `index.html` and refresh the browser; the server reads it from disk on every request. A `services.json` created here is ignored by git.
+
+**If Windows blocks the server.** Some machines (Smart App Control, WDAC, AppLocker) refuse to run a program that was just compiled, so `go run` and `go test` fail with "An Application Control policy has blocked this file". Use `.\dev.ps1 -Docker`: it runs the same server in a Go container with this folder mounted, so editing `index.html` still shows on refresh (restart after changing Go code). With `-Test` it also runs gofmt, `go vet` and `go test` inside the container. It needs Docker, and the first run downloads the Go image.
 
 To try the Docker image instead: `docker compose up --build`, then open `http://localhost:8080`. Data goes to `./.data`.
 
