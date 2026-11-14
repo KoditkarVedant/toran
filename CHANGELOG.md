@@ -5,6 +5,9 @@ can change between releases, including the config format and the API.
 
 ## [Unreleased]
 
+### Security
+- Saving and uploading are now refused when a request comes from another website (cross-site request protection). Set `TRUSTED_ORIGINS` if a reverse proxy changes the `Host` header.
+
 ## [0.1.0]
 
 First tagged release.

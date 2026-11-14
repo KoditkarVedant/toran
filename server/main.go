@@ -7,8 +7,9 @@
 //
 // Settings come from environment variables (see envOr calls). No third-party packages.
 //
-// Layout: server.go (type + settings), access.go (who may write), config.go and
-// backups.go (services.json), uploads.go, static.go, status.go, httpx.go (helpers).
+// Layout: server.go (type + settings), access.go (who may write), origin.go (cross-site
+// protection), config.go and backups.go (services.json), uploads.go, static.go, status.go,
+// httpx.go (helpers).
 package main
 
 import (
@@ -29,7 +30,7 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("DELETE /wallpaper/{name}", s.delFile("wallpaper"))
 	mux.HandleFunc("PUT /icons/{name}", s.putFile("icons", 2<<20, ".svg", ".png", ".webp"))
 	mux.HandleFunc("GET /", s.static)
-	return mux
+	return s.origin.Handler(mux) // outermost, so no route can skip the cross-site check
 }
 
 func main() {
@@ -38,6 +39,9 @@ func main() {
 		log.Fatal(err)
 	}
 	s := newServer(root)
+	if err := s.trustOrigins(envOr("TRUSTED_ORIGINS", "")); err != nil {
+		log.Fatal(err)
+	}
 	addr := envOr("ADDR", ":8080")
 	srv := &http.Server{
 		Addr: addr, Handler: s.routes(),

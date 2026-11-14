@@ -22,8 +22,9 @@ type check struct {
 }
 
 type server struct {
-	root        string // folder holding index.html, services.json, uploads, backups...
-	lanOnly     bool   // only private-network clients may write
+	root        string                      // folder holding index.html, services.json, uploads, backups...
+	lanOnly     bool                        // only private-network clients may write
+	origin      *http.CrossOriginProtection // rejects writes steered by another website
 	maxBackups  int
 	backupEvery time.Duration
 
@@ -46,7 +47,7 @@ func envOr(k, d string) string {
 
 func newServer(root string) *server {
 	s := &server{
-		root: root, lanOnly: envOr("LAN_ONLY", "true") != "false",
+		root: root, lanOnly: envOr("LAN_ONLY", "true") != "false", origin: newOriginGuard(),
 		maxBackups: 30, backupEvery: 10 * time.Minute,
 		checkHost: envOr("CHECK_HOST", "127.0.0.1"), stCache: map[string]check{}, stTTL: 15 * time.Second,
 		client: &http.Client{

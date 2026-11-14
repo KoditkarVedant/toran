@@ -7,7 +7,19 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 )
+
+// splitList splits a comma-separated setting, dropping spaces and empty entries.
+func splitList(s string) []string {
+	var out []string
+	for _, p := range strings.Split(s, ",") {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
 
 func writeJSON(w http.ResponseWriter, code int, v any) {
 	w.Header().Set("Content-Type", "application/json")

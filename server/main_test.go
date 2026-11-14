@@ -22,8 +22,20 @@ func newTest(t *testing.T) (*server, http.Handler, string) {
 }
 
 func do(h http.Handler, method, target, remote string, body []byte) *httptest.ResponseRecorder {
+	return doWith(h, method, target, remote, body, nil)
+}
+
+// doWith is do plus request headers. The key "Host" sets the request's Host instead.
+func doWith(h http.Handler, method, target, remote string, body []byte, headers map[string]string) *httptest.ResponseRecorder {
 	req := httptest.NewRequest(method, target, bytes.NewReader(body))
 	req.RemoteAddr = remote
+	for k, v := range headers {
+		if k == "Host" {
+			req.Host = v
+		} else {
+			req.Header.Set(k, v)
+		}
+	}
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 	return rec
