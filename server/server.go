@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/netip"
 	"os"
-	"path/filepath"
 	"sync"
 	"time"
 )
@@ -30,8 +29,7 @@ type server struct {
 	maxBackups  int
 	backupEvery time.Duration
 
-	mu         sync.Mutex // guards services.json writes and backups
-	lastBackup time.Time
+	dash *dashboard // the one shared dashboard (per-user dashboards replace this when logins arrive)
 
 	checkHost string // host used for bare-port status checks (127.0.0.1 with host networking)
 	stMu      sync.Mutex
@@ -58,14 +56,7 @@ func newServer(root string) *server {
 			Transport:     newCheckTransport(), // see safedial.go
 		},
 	}
-	// remember when the newest backup was made so a restart doesn't trigger an extra one
-	if es, err := os.ReadDir(filepath.Join(root, "backups")); err == nil {
-		for _, e := range es {
-			if fi, err := e.Info(); err == nil && fi.ModTime().After(s.lastBackup) {
-				s.lastBackup = fi.ModTime()
-			}
-		}
-	}
+	s.dash = s.newDashboard(root)
 	return s
 }
 

@@ -28,7 +28,13 @@ func writeJSON(w http.ResponseWriter, code int, v any) {
 	_ = json.NewEncoder(w).Encode(v)
 }
 
-func atomicWrite(dst string, data []byte) error {
+// atomicWrite replaces dst in one step, readable by everyone (page config, uploads, backups).
+func atomicWrite(dst string, data []byte) error { return atomicWriteMode(dst, data, 0o644) }
+
+// atomicWriteMode is atomicWrite with the file's permissions chosen by the caller: secrets
+// (password hashes, the session key) use 0o600 so other users on the machine cannot read them.
+// The file is written to a temporary name and renamed, so a crash never leaves half a file.
+func atomicWriteMode(dst string, data []byte, mode os.FileMode) error {
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return err
 	}
@@ -46,6 +52,6 @@ func atomicWrite(dst string, data []byte) error {
 	if err != nil {
 		return err
 	}
-	_ = os.Chmod(tmp.Name(), 0o644)
+	_ = os.Chmod(tmp.Name(), mode)
 	return os.Rename(tmp.Name(), dst)
 }

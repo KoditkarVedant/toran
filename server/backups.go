@@ -1,6 +1,6 @@
 package main
 
-// Dated backups of services.json: create, list, restore.
+// Dated backups of a dashboard's services.json: create, list, restore.
 
 import (
 	"encoding/json"
@@ -17,26 +17,27 @@ import (
 var backupName = regexp.MustCompile(`^services-\d{8}-\d{6}-\d{3}\.json$`)
 
 // backupLocked stores the given (previous) content, at most once per backupEvery unless forced.
-func (s *server) backupLocked(content []byte, force bool) {
-	if !force && time.Since(s.lastBackup) < s.backupEvery {
+// The caller holds d.mu.
+func (d *dashboard) backupLocked(content []byte, force bool) {
+	if !force && time.Since(d.lastBackup) < d.s.backupEvery {
 		return
 	}
 	t := time.Now().UTC()
 	name := fmt.Sprintf("services-%s-%03d.json", t.Format("20060102-150405"), t.Nanosecond()/1e6)
-	if err := atomicWrite(filepath.Join(s.root, "backups", name), content); err != nil {
+	if err := atomicWrite(filepath.Join(d.backupDir(), name), content); err != nil {
 		log.Printf("backup: %v", err)
 		return
 	}
-	s.lastBackup = time.Now()
-	names := s.backupNames()
-	for i := s.maxBackups; i < len(names); i++ {
-		_ = os.Remove(filepath.Join(s.root, "backups", names[i]))
+	d.lastBackup = time.Now()
+	names := d.backupNames()
+	for i := d.s.maxBackups; i < len(names); i++ {
+		_ = os.Remove(filepath.Join(d.backupDir(), names[i]))
 	}
 }
 
 // newest first
-func (s *server) backupNames() []string {
-	es, _ := os.ReadDir(filepath.Join(s.root, "backups"))
+func (d *dashboard) backupNames() []string {
+	es, _ := os.ReadDir(d.backupDir())
 	var names []string
 	for _, e := range es {
 		if backupName.MatchString(e.Name()) {
@@ -47,16 +48,16 @@ func (s *server) backupNames() []string {
 	return names
 }
 
-func (s *server) listBackups(w http.ResponseWriter, r *http.Request) {
+func (d *dashboard) listBackups(w http.ResponseWriter, r *http.Request) {
 	type item struct {
 		Name string `json:"name"`
 		Time string `json:"time"`
 		Size int64  `json:"size"`
 	}
 	out := []item{}
-	for _, n := range s.backupNames() {
+	for _, n := range d.backupNames() {
 		t, err := time.Parse("20060102-150405", n[len("services-"):len("services-")+15])
-		fi, ferr := os.Stat(filepath.Join(s.root, "backups", n))
+		fi, ferr := os.Stat(filepath.Join(d.backupDir(), n))
 		if err != nil || ferr != nil {
 			continue
 		}
@@ -65,7 +66,7 @@ func (s *server) listBackups(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, out)
 }
 
-func (s *server) restore(w http.ResponseWriter, r *http.Request) {
+func (d *dashboard) restore(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Name string `json:"name"`
 	}
@@ -73,17 +74,17 @@ func (s *server) restore(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad backup name", http.StatusBadRequest)
 		return
 	}
-	data, err := os.ReadFile(filepath.Join(s.root, "backups", req.Name))
+	data, err := os.ReadFile(filepath.Join(d.backupDir(), req.Name))
 	if err != nil || !validConfig(data) {
 		http.Error(w, "backup not found or not valid", http.StatusNotFound)
 		return
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if cur, err := os.ReadFile(s.configPath()); err == nil {
-		s.backupLocked(cur, true) // never lose what is being replaced
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if cur, err := os.ReadFile(d.configPath()); err == nil {
+		d.backupLocked(cur, true) // never lose what is being replaced
 	}
-	if err := atomicWrite(s.configPath(), data); err != nil {
+	if err := atomicWrite(d.configPath(), data); err != nil {
 		http.Error(w, "could not restore", http.StatusInternalServerError)
 		return
 	}

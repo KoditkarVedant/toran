@@ -27,8 +27,9 @@ func (s *server) target(u string) string {
 	return u
 }
 
-func (s *server) configURLs() []string {
-	b, err := os.ReadFile(s.configPath())
+// configURLs lists the distinct service addresses in a dashboard's config.
+func (d *dashboard) configURLs() []string {
+	b, err := os.ReadFile(d.configPath())
 	if err != nil {
 		return nil
 	}
@@ -76,7 +77,7 @@ func (s *server) checkOne(u string) check {
 }
 
 func (s *server) status(w http.ResponseWriter, r *http.Request) {
-	urls := s.configURLs()
+	urls := s.dash.configURLs()
 	out := make(map[string]check, len(urls))
 	var stale []string
 	s.stMu.Lock()

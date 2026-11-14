@@ -9,10 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 )
-
-func (s *server) configPath() string { return filepath.Join(s.root, "services.json") }
 
 func validConfig(b []byte) bool {
 	var probe struct {
@@ -21,7 +18,7 @@ func validConfig(b []byte) bool {
 	return json.Unmarshal(b, &probe) == nil && probe.Groups != nil
 }
 
-func (s *server) putConfig(w http.ResponseWriter, r *http.Request) {
+func (d *dashboard) putConfig(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1<<20))
 	if err != nil {
 		http.Error(w, "config too large or unreadable", http.StatusRequestEntityTooLarge)
@@ -31,12 +28,12 @@ func (s *server) putConfig(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "expected a JSON object with a groups array", http.StatusBadRequest)
 		return
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if old, err := os.ReadFile(s.configPath()); err == nil && !bytes.Equal(old, body) {
-		s.backupLocked(old, false)
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if old, err := os.ReadFile(d.configPath()); err == nil && !bytes.Equal(old, body) {
+		d.backupLocked(old, false)
 	}
-	if err := atomicWrite(s.configPath(), body); err != nil {
+	if err := atomicWrite(d.configPath(), body); err != nil {
 		log.Printf("write services.json: %v", err)
 		http.Error(w, "could not write the config on the server", http.StatusInternalServerError)
 		return

@@ -53,7 +53,7 @@ func TestConfigSaveBackupRestore(t *testing.T) {
 	if r := do(h, "PUT", "/services.json", lan, v1); r.Code != 204 {
 		t.Fatalf("first save: %d %s", r.Code, r.Body)
 	}
-	if n := len((&server{root: dir}).backupNames()); n != 0 {
+	if n := len((&dashboard{dir: dir}).backupNames()); n != 0 {
 		t.Fatalf("first save has nothing to back up, got %d backups", n)
 	}
 	time.Sleep(3 * time.Millisecond)
@@ -66,7 +66,7 @@ func TestConfigSaveBackupRestore(t *testing.T) {
 	}
 	// saving identical content must not create another backup
 	do(h, "PUT", "/services.json", lan, v2)
-	names := (&server{root: dir}).backupNames()
+	names := (&dashboard{dir: dir}).backupNames()
 	if len(names) != 1 {
 		t.Fatalf("want 1 backup (the previous version), got %v", names)
 	}
@@ -89,7 +89,7 @@ func TestConfigSaveBackupRestore(t *testing.T) {
 	if !bytes.Equal(got, v1) {
 		t.Fatalf("restore did not bring back v1: %s", got)
 	}
-	if n := len((&server{root: dir}).backupNames()); n != 2 {
+	if n := len((&dashboard{dir: dir}).backupNames()); n != 2 {
 		t.Fatalf("restoring must back up what it replaces; backups=%d", n)
 	}
 	if r := do(h, "POST", "/api/backups/restore", lan, []byte(`{"name":"../../etc/passwd"}`)); r.Code != 400 {
@@ -118,7 +118,7 @@ func TestBackupPruning(t *testing.T) {
 		do(h, "PUT", "/services.json", lan, body)
 		time.Sleep(3 * time.Millisecond)
 	}
-	if n := len(s.backupNames()); n != 3 {
+	if n := len(s.dash.backupNames()); n != 3 {
 		t.Fatalf("want 3 backups kept, got %d (%s)", n, dir)
 	}
 }
