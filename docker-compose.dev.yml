@@ -8,7 +8,7 @@
 name: toran-dev
 services:
   toran-dev:
-    image: golang:1.24-alpine      # keep in step with the builder image in the Dockerfile
+    image: golang:1.25-alpine      # keep in step with the builder image in the Dockerfile
     init: true
     working_dir: /app/server
     # create a services.json from the sample on the first run
