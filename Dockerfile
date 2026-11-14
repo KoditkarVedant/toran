@@ -19,8 +19,8 @@ COPY --from=build /toran /usr/local/bin/toran
 # which is also where services.json, backups and uploads live
 COPY index.html custom.css services.sample.json /opt/toran/
 COPY wallpapers /opt/toran/wallpapers
-COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+# --chmod instead of RUN keeps this stage free of RUN steps, so arm images build without emulation
+COPY --chmod=755 docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 ENV ROOT=/data ADDR=:8080 GOMEMLIMIT=24MiB
 VOLUME /data
 EXPOSE 8080
