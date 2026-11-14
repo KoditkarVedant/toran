@@ -3,7 +3,6 @@ package main
 // The server type, its settings and construction.
 
 import (
-	"crypto/tls"
 	"net/http"
 	"net/netip"
 	"os"
@@ -55,7 +54,7 @@ func newServer(root string) *server {
 		client: &http.Client{
 			Timeout:       2500 * time.Millisecond,
 			CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
-			Transport:     &http.Transport{DisableKeepAlives: true, TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}, // LAN self-signed certs
+			Transport:     newCheckTransport(), // see safedial.go
 		},
 	}
 	// remember when the newest backup was made so a restart doesn't trigger an extra one

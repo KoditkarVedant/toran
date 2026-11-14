@@ -57,8 +57,8 @@ func (s *server) configURLs() []string {
 func (s *server) checkOne(u string) check {
 	start := time.Now()
 	req, err := http.NewRequest(http.MethodGet, s.target(u), nil)
-	if err != nil {
-		return check{State: "down"}
+	if err != nil || (req.URL.Scheme != "http" && req.URL.Scheme != "https") || req.URL.Hostname() == "" {
+		return check{State: "down"} // only web addresses are checked: no file://, ftp:// ...
 	}
 	req.Header.Set("User-Agent", "toran-status/"+version)
 	resp, err := s.client.Do(req)
