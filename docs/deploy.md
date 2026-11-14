@@ -1,4 +1,20 @@
-# Deploy with Portainer
+# Deploy
+
+Two ways: the published Docker image (simplest), or plain binaries copied to the Pi (below).
+
+## Run the Docker image
+
+```sh
+docker run -d --name toran --restart unless-stopped -p 8080:8080 -v toran-data:/data youruser/toran:latest
+```
+
+Or in Portainer, a stack with `image: youruser/toran:latest`, `ports: ["8080:8080"]` and a volume on `/data`. Then open `http://<host>:8080`.
+
+- `/data` holds your `services.json`, backups and uploads. The page files in it are refreshed from the image on every start, so updating is `docker pull` and a restart. Your data is kept.
+- Publish your own build with `publish.ps1` ([Development](development.md#publish-to-docker-hub)).
+- Writes are limited to private-network clients (`LAN_ONLY`). Behind Docker's default bridge network clients appear as private addresses, so this does not protect an instance you expose to the internet. Do not expose it.
+
+# Deploy with Portainer and plain binaries
 
 Toran runs as one small container. The stack uses the plain `alpine` image and runs the Go binary from a folder on the Pi, so there is no registry and no build on the Pi.
 

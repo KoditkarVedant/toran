@@ -15,7 +15,15 @@ A fast, good-looking start page for your home server. One tile per service, so y
 - **Editing:** add, edit, delete and drag to reorder in the page itself. Nothing to hand-edit.
 - **Go server (optional, ~7 MB):** saves your config, keeps dated backups, checks service health from the server. Without it the page still works behind plain nginx.
 
-## Quick start (Portainer)
+## Quick start (Docker)
+
+```sh
+docker run -d --name toran --restart unless-stopped -p 8080:8080 -v toran-data:/data youruser/toran:latest
+```
+
+Then open `http://<host>:8080`. Build and publish your own image with `publish.ps1`, and run it locally with `dev.ps1`: see [docs/development.md](docs/development.md).
+
+## Quick start (Portainer, no registry)
 
 1. Build the Pi binaries (needs [Go](https://go.dev/dl/)): `.\build.ps1` (PowerShell). This creates `deploy\`.
 2. Copy the contents of `deploy\` to `/srv/toran` on the Pi.
@@ -38,6 +46,8 @@ There is **no login yet**. Saving is limited to private-network clients by defau
 | `wallpapers/` | Bundled photos, with credits in `CREDITS.md` |
 | `contrib/nginx.conf` | Config for running the page behind nginx with no Go server |
 | `build.ps1`, `stack.yml` | Build the Pi binaries; the Portainer stack |
+| `Dockerfile`, `docker/`, `docker-compose.yml` | The multi-arch image and its local compose file |
+| `dev.ps1`, `publish.ps1` | Run locally; build and push the image to Docker Hub |
 | `docs/` | Documentation site source |
 
 ## Credits

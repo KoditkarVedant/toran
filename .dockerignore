@@ -1,0 +1,11 @@
+.git
+deploy
+tests
+docs
+contrib
+*.ps1
+.data
+services.json
+backups
+wallpaper
+icons

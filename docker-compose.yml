@@ -1,0 +1,15 @@
+# Local use: docker compose up --build   then open http://localhost:8080
+# Data (services.json, backups, uploads) is kept in ./.data, which git ignores.
+# To run the published image instead of building: replace "build: ." with "image: YOURUSER/toran:latest".
+services:
+  toran:
+    build: .
+    container_name: toran
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./.data:/data
+    environment:
+      # LAN_ONLY: "true"             # only private-network clients may save (set "false" to allow anyone)
+      GOMEMLIMIT: 24MiB

@@ -22,19 +22,28 @@ The server tests cover config saving, backups and restore, upload validation, th
 
 ## Run it locally
 
-Any static server works for the page alone. For the full server:
-
 ```powershell
-cd server
-$env:ROOT = (Resolve-Path ..).Path
-go run .
+.\dev.ps1            # http://localhost:8080
+.\dev.ps1 -Test      # run the page tests and the server checks first
+.\dev.ps1 -Port 9090
 ```
 
-then open `http://localhost:8080`. A real `services.json` created there is ignored by git.
+This runs the real Go server against this folder. Edit `index.html` and refresh the browser; the server reads it from disk on every request. A `services.json` created here is ignored by git.
+
+To try the Docker image instead: `docker compose up --build`, then open `http://localhost:8080`. Data goes to `./.data`.
 
 ## Build for the Pi
 
 `.\build.ps1` cross-compiles for 64-bit ARM, 32-bit ARM (v7 and v6) and x86-64. Nothing is run on the build machine.
+
+## Publish to Docker Hub
+
+```powershell
+docker login
+.\publish.ps1 -Image youruser/toran -Version 1.0
+```
+
+This vets and tests the server, then builds one multi-arch image (`linux/amd64`, `linux/arm64`, `linux/arm/v7`) and pushes it as `:1.0` and `:latest`. Add `-NoPush` to build without pushing, which checks the Dockerfile. See [Deploy](deploy.md#run-the-docker-image).
 
 ## Conventions
 
