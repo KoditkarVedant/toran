@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 func newAccounts(t *testing.T) (*accounts, string) {
@@ -257,5 +258,58 @@ func TestListIsACopy(t *testing.T) {
 	l[0].Role = roleUser
 	if got, _ := a.byName("vedant"); got.Role != roleAdmin {
 		t.Error("changing the returned list must not change the store")
+	}
+}
+
+// `toran reset-password` runs as another process while the server is up. The server must see
+// the new file, and must not overwrite it from stale memory the next time it saves.
+func TestEditsMadeByAnotherProcessAreNoticed(t *testing.T) {
+	a, path := newAccounts(t)
+	clock := t0
+	a.now = func() time.Time { return clock }
+	admin := mustCreate(t, a, "vedant", roleAdmin)
+
+	other, err := openAccounts(path) // the other process
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := other.update(admin.ID, func(u *user) error { u.Hash = "reset"; u.TokenVersion++; return nil }); err != nil {
+		t.Fatal(err)
+	}
+
+	if got, _ := a.byID(admin.ID); got.Hash == "reset" {
+		t.Error("the file is only looked at once per recheck interval")
+	}
+	clock = clock.Add(2 * recheckEvery)
+	if got, _ := a.byID(admin.ID); got.Hash != "reset" || got.TokenVersion != 1 {
+		t.Errorf("the other process's change must be seen: %+v", got)
+	}
+
+	// saving after an outside edit builds on the edit instead of undoing it
+	if _, err := other.update(admin.ID, func(u *user) error { u.Hash = "reset-again"; return nil }); err != nil {
+		t.Fatal(err)
+	}
+	mustCreate(t, a, "kid", roleUser) // no wait for the interval: saving re-reads first
+	if got, _ := a.byID(admin.ID); got.Hash != "reset-again" {
+		t.Errorf("a save must not overwrite someone else's edit: %+v", got)
+	}
+}
+
+func TestOutsideDeletionAndDamageHandling(t *testing.T) {
+	a, path := newAccounts(t)
+	clock := t0
+	a.now = func() time.Time { return clock }
+	mustCreate(t, a, "vedant", roleAdmin)
+
+	_ = os.WriteFile(path, []byte("{broken"), 0o600)
+	clock = clock.Add(2 * recheckEvery)
+	if a.count() != 1 {
+		t.Error("a damaged file must be ignored, keeping the last good state")
+	}
+
+	_ = os.Remove(path)
+	clock = clock.Add(2 * recheckEvery)
+	if a.count() != 0 {
+		t.Error("a deleted file means no accounts (first-run setup again)")
 	}
 }

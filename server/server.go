@@ -29,8 +29,17 @@ type server struct {
 	maxBackups  int
 	backupEvery time.Duration
 
-	sessions *sessions  // signs login cookies (set up with the accounts feature)
-	dash     *dashboard // the one shared dashboard (per-user dashboards replace this when logins arrive)
+	// accounts and login; all set by initAuth (auth.go)
+	accounts   *accounts
+	sessions   *sessions // signs login cookies
+	limiter    *failureLimiter
+	gate       hashGate // caps concurrent password checks
+	iterations int      // PBKDF2 iterations for new hashes
+	dummyHash  string   // checked when a login names nobody, so timing does not reveal which names exist
+	setupMu    sync.Mutex
+	setupCode  string // first-run code, empty once an admin exists
+
+	dash *dashboard // the one shared dashboard (per-user dashboards replace this when logins arrive)
 
 	checkHost string // host used for bare-port status checks (127.0.0.1 with host networking)
 	stMu      sync.Mutex

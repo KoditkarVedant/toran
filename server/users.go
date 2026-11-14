@@ -8,11 +8,13 @@ package main
 // The rest of the server only uses the methods below, never the file.
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"regexp"
 	"strings"
@@ -53,14 +55,22 @@ type usersFile struct {
 
 type accounts struct {
 	path string
-	mu   sync.RWMutex
-	list []user // in order of creation
+	now  func() time.Time
+
+	mu      sync.Mutex
+	list    []user    // in order of creation
+	raw     []byte    // the file as last read or written, to notice changes made behind our back
+	checked time.Time // when the file was last compared with raw
 }
+
+// recheckEvery bounds how often the file is looked at when only reading. A change made by another
+// process, such as `toran reset-password` while the server runs, is picked up within this time.
+const recheckEvery = time.Second
 
 // openAccounts reads users.json. A missing file is an empty store; a damaged or newer file is an
 // error, so that Toran stops instead of treating it as empty and overwriting it.
 func openAccounts(path string) (*accounts, error) {
-	a := &accounts{path: path}
+	a := &accounts{path: path, now: time.Now}
 	b, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return a, nil
@@ -68,6 +78,15 @@ func openAccounts(path string) (*accounts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read %s: %w", path, err)
 	}
+	list, err := parseUsers(path, b)
+	if err != nil {
+		return nil, err
+	}
+	a.list, a.raw = list, b
+	return a, nil
+}
+
+func parseUsers(path string, b []byte) ([]user, error) {
 	var f usersFile
 	if err := json.Unmarshal(b, &f); err != nil {
 		return nil, fmt.Errorf("%s is not valid JSON (%v); fix or restore it, Toran will not overwrite it", path, err)
@@ -87,8 +106,38 @@ func openAccounts(path string) (*accounts, error) {
 		}
 		seenID[u.ID], seenName[u.Name] = true, true
 	}
-	a.list = f.Users
-	return a, nil
+	return f.Users, nil
+}
+
+// refresh picks up an edit made to the file by someone else. A file that has become unreadable or
+// invalid is ignored (and reported) rather than trusted, so the last good state stays in force.
+// force skips the rate limit. Call with mu held.
+func (a *accounts) refresh(force bool) {
+	now := time.Now()
+	if a.now != nil { // tests use a fake clock
+		now = a.now()
+	}
+	if !force && now.Sub(a.checked) < recheckEvery {
+		return
+	}
+	a.checked = now
+	b, err := os.ReadFile(a.path)
+	switch {
+	case errors.Is(err, os.ErrNotExist):
+		if a.raw != nil {
+			a.list, a.raw = nil, nil
+		}
+	case err != nil:
+		log.Printf("users: cannot re-read %s: %v", a.path, err)
+	case !bytes.Equal(b, a.raw):
+		list, err := parseUsers(a.path, b)
+		if err != nil {
+			log.Printf("users: ignoring the changed file: %v", err)
+			a.raw = b // report once, not on every request
+			return
+		}
+		a.list, a.raw = list, b
+	}
 }
 
 // change applies fn to a copy of the users, checks the rules that must always hold, saves, and
@@ -96,6 +145,7 @@ func openAccounts(path string) (*accounts, error) {
 func (a *accounts) change(fn func(us []user) ([]user, error)) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
+	a.refresh(true)
 	next, err := fn(append([]user(nil), a.list...))
 	if err != nil {
 		return err
@@ -108,10 +158,11 @@ func (a *accounts) change(fn func(us []user) ([]user, error)) error {
 	if err != nil {
 		return err
 	}
-	if err := atomicWriteMode(a.path, append(b, '\n'), 0o600); err != nil {
+	b = append(b, '\n')
+	if err := atomicWriteMode(a.path, b, 0o600); err != nil {
 		return fmt.Errorf("save users: %w", err)
 	}
-	a.list = next
+	a.list, a.raw = next, b
 	return nil
 }
 
@@ -189,14 +240,16 @@ func (a *accounts) remove(id string) error {
 }
 
 func (a *accounts) count() int {
-	a.mu.RLock()
-	defer a.mu.RUnlock()
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.refresh(false)
 	return len(a.list)
 }
 
 func (a *accounts) byID(id string) (user, bool) {
-	a.mu.RLock()
-	defer a.mu.RUnlock()
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.refresh(false)
 	for _, u := range a.list {
 		if u.ID == id {
 			return u, true
@@ -207,8 +260,9 @@ func (a *accounts) byID(id string) (user, bool) {
 
 func (a *accounts) byName(name string) (user, bool) {
 	name = normalizeName(name)
-	a.mu.RLock()
-	defer a.mu.RUnlock()
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.refresh(false)
 	for _, u := range a.list {
 		if u.Name == name {
 			return u, true
@@ -218,8 +272,9 @@ func (a *accounts) byName(name string) (user, bool) {
 }
 
 func (a *accounts) all() []user {
-	a.mu.RLock()
-	defer a.mu.RUnlock()
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.refresh(false)
 	return append([]user(nil), a.list...)
 }
 

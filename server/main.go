@@ -15,6 +15,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"time"
 )
@@ -22,6 +23,11 @@ import (
 func (s *server) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/health", s.health)
+	mux.HandleFunc("GET /api/session", s.sessionInfo)
+	mux.HandleFunc("POST /api/setup", s.setup)
+	mux.HandleFunc("POST /api/login", s.login)
+	mux.HandleFunc("POST /api/logout", s.logout)
+	mux.HandleFunc("POST /api/password", s.authed(s.changePassword))
 	mux.HandleFunc("GET /api/status", s.status)
 	mux.HandleFunc("GET /api/backups", s.dash.listBackups)
 	mux.HandleFunc("POST /api/backups/restore", s.guard(s.dash.restore))
@@ -36,11 +42,22 @@ func (s *server) routes() http.Handler {
 }
 
 func main() {
+	if runCommand(os.Args[1:], os.Stdin) {
+		return
+	}
 	root, err := filepath.Abs(envOr("ROOT", "."))
 	if err != nil {
 		log.Fatal(err)
 	}
 	s := newServer(root)
+	authCfg, err := authConfigFromEnv()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := s.initAuth(authCfg); err != nil {
+		log.Fatal(err)
+	}
+	s.pendingSetupCode() // on a fresh install, puts the first-run code in the log
 	if err := s.trustOrigins(envOr("TRUSTED_ORIGINS", "")); err != nil {
 		log.Fatal(err)
 	}
