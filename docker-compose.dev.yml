@@ -1,6 +1,6 @@
 # Development: runs the real Go server from this folder, inside a Go container.
-#   docker compose -f docker-compose.dev.yml up          then open http://localhost:8787  (Ctrl+C stops it)
-#   TORAN_PORT=9090 docker compose -f docker-compose.dev.yml up    another port
+#   docker compose -f docker-compose.dev.yml up          then open http://localhost:9090  (Ctrl+C stops it)
+#   TORAN_PORT=9191 docker compose -f docker-compose.dev.yml up    another port
 # Edit index.html and refresh: the server reads it from disk on every request.
 # After changing Go code, press Ctrl+C and run it again.
 # Checks (gofmt, vet, tests) are in docs/development.md.
@@ -14,7 +14,7 @@ services:
     # create a services.json from the sample on the first run
     command: sh -c "[ -f ../services.json ] || cp ../services.sample.json ../services.json; exec go run ."
     ports:
-      - "${TORAN_PORT:-8787}:8080"
+      - "${TORAN_PORT:-9090}:8080"
     environment:
       ROOT: /app
       ADDR: ":8080"

@@ -11,13 +11,13 @@ Build and run the server as a package, not a single file: `go run .`, not `go ru
 ## Run it locally
 
 ```sh
-docker compose -f docker-compose.dev.yml up      # then open http://localhost:8787, Ctrl+C stops it
-TORAN_PORT=9090 docker compose -f docker-compose.dev.yml up    # another port
+docker compose -f docker-compose.dev.yml up      # then open http://localhost:9090, Ctrl+C stops it
+TORAN_PORT=9191 docker compose -f docker-compose.dev.yml up    # another port
 ```
 
 This runs the real Go server in a Go container with this folder mounted. Edit `index.html` and refresh the browser; the server reads it from disk on every request. After changing Go code, press Ctrl+C and start it again. The first run downloads the Go image and creates a `services.json` from the sample; that file, your backups and uploads are ignored by git.
 
-Without Docker, if you have Go: `cd server`, set `ROOT` to the repo folder and `ADDR` to `:8787`, then `go run .`. Some Windows setups (Smart App Control, WDAC, AppLocker) refuse to run a program that was just compiled, so `go run` and `go test` fail with "An Application Control policy has blocked this file". The Docker route avoids that.
+Without Docker, if you have Go: `cd server`, set `ROOT` to the repo folder and `ADDR` to `:9090`, then `go run .`. Some Windows setups (Smart App Control, WDAC, AppLocker) refuse to run a program that was just compiled, so `go run` and `go test` fail with "An Application Control policy has blocked this file". The Docker route avoids that.
 
 To try the finished image instead: `docker compose up --build`, then open `http://localhost:8080`. Data goes to `./.data`.
 
