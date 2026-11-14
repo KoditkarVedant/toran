@@ -452,6 +452,9 @@ const el = (t, a = {}, ...c) => {
 };
 const icoEl = k => { const s = el('span', { class: 'svg' }); s.innerHTML = ICONS[k]; return s; };
 const resolve = u => /^:?\d+$/.test(u) ? `${location.protocol}//${location.hostname}:${u.replace(':', '')}` : u;
+// Links come from services.json, which anyone allowed to save can edit. A javascript: link would run in this page when
+// clicked, so those schemes become a no-op. Whitespace and control characters are dropped first: browsers ignore them inside a scheme.
+const safeHref = u => /^(javascript|data|vbscript|blob):/i.test(String(u).replace(/[\u0000- \u007f-\u009f]/g, '')) ? '#' : u;
 const hue = s => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
 const isImg = s => /^(https?:|\/|\.)/.test(s || '');
 const isLocalWall = u => /^wallpaper\//.test(u || '');
@@ -610,7 +613,7 @@ function moveBefore(tg, titem) {      // drag & drop reorder
 }
 function makeTile(g, item, first) {
   const u = resolve(item.url);
-  const tile = el('a', { class: 'tile' + (first ? ' first' : ''), href: u, title: u, style: '--h:' + hue(item.name), draggable: editing ? 'true' : null, ...linkAttrs() },
+  const tile = el('a', { class: 'tile' + (first ? ' first' : ''), href: safeHref(u), title: u, style: '--h:' + hue(item.name), draggable: editing ? 'true' : null, ...linkAttrs() },
     icon(item),
     el('div', { class: 'meta' }, el('div', { class: 'name' }, item.name), el('div', { class: 'desc' }, item.desc || u.replace(/^https?:\/\//, ''))),
     el('span', { class: 'dot ' + (status[u] || ''), 'data-u': u }),
@@ -625,7 +628,7 @@ function makeTile(g, item, first) {
 }
 function heroEl(item) {
   const u = resolve(item.url);
-  const a = el('a', { class: 'hero', href: u, style: '--h:' + hue(item.name), ...linkAttrs() },
+  const a = el('a', { class: 'hero', href: safeHref(u), style: '--h:' + hue(item.name), ...linkAttrs() },
     el('div', {}, el('div', { class: 'tag' }, 'Featured'), el('h2', {}, item.name), el('p', {}, item.desc || u.replace(/^https?:\/\//, '')), el('span', { class: 'open' }, 'Open')),
     el('div', { class: 'big' }, icon(item)));
   a.addEventListener('click', e => { if (editing) e.preventDefault(); else bump(item); });
@@ -633,7 +636,7 @@ function heroEl(item) {
 }
 function cardEl(item) {
   const u = resolve(item.url);
-  const a = el('a', { class: 'rcard', href: u, style: '--h:' + hue(item.name), ...linkAttrs() }, icon(item),
+  const a = el('a', { class: 'rcard', href: safeHref(u), style: '--h:' + hue(item.name), ...linkAttrs() }, icon(item),
     el('div', {}, el('div', { class: 'name' }, item.name), el('div', { class: 'desc' }, u.replace(/^https?:\/\//, ''))));
   a.addEventListener('click', e => { if (editing) e.preventDefault(); else bump(item); });
   return a;

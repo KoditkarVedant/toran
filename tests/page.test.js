@@ -173,6 +173,17 @@ const ok = (cond, msg) => { if (!cond) { fails++; console.log('FAIL:', msg); } e
   ok(true, `${combos} layoutÃ—theme combinations applied`);
   for (const n of ['sections', 'tabs', 'sidebar']) { w.eval(`setKey("nav","${n}")`); ok(d.documentElement.dataset.nav === n, 'nav ' + n); }
 
+  // links that would run script are neutralised; ordinary ones are untouched
+  for (const bad of ['javascript:alert(1)', 'JaVaScRiPt:alert(1)', ' \tjava\nscript:alert(1)', 'data:text/html,<script>1</script>', 'vbscript:x', 'blob:http://x/y'])
+    ok(w.eval(`safeHref(${JSON.stringify(bad)})`) === '#', 'blocked link: ' + JSON.stringify(bad));
+  for (const good of ['http://pi:81', 'https://x.example/a?b=c', 'ssh://pi', 'smb://nas/share', '/relative', 'http://pi.local:8080/javascript:x'])
+    ok(w.eval(`safeHref(${JSON.stringify(good)})`) === good, 'allowed link: ' + good);
+  w.eval('cfg.groups[0].items.push({ name: "Evil", url: "javascript:alert(1)" }); render()');
+  const evil = $$('a.tile, a.hero, a.rcard').find(a => a.textContent.includes('Evil'));
+  ok(evil && evil.getAttribute('href') === '#', 'a javascript: tile renders as a no-op link: ' + evil?.getAttribute('href'));
+  ok(!$$('a').some(a => /^\s*javascript:/i.test(a.getAttribute('href') || '')), 'no rendered link starts with javascript:');
+  w.eval('cfg.groups[0].items.pop(); render()');
+
   // screensaver
   w.eval('startSS("stars")'); ok($('#ss').hasAttribute('open'), 'screensaver starts'); w.eval('ssEl.close()');
 
