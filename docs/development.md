@@ -3,37 +3,40 @@
 ## Layout
 
 - `index.html` is the whole page: HTML, CSS and JavaScript in one file, no build step, no dependencies.
-- `server/main.go` is the Go server (standard library only). `server/main_test.go` tests it.
+- `server/` is the Go server (standard library only), split by job: `server.go` (type and settings), `access.go` (who may write), `config.go` and `backups.go` (`services.json`), `uploads.go`, `static.go`, `status.go`, `httpx.go` (helpers), `main.go` (startup). `main_test.go` tests it.
 - `tests/` holds simulated-browser tests for the page (jsdom).
+
+Build and run the server as a package, not a single file: `go run .`, not `go run main.go`.
+
+## Run it locally
+
+```sh
+docker compose -f docker-compose.dev.yml up      # then open http://localhost:8787, Ctrl+C stops it
+TORAN_PORT=9090 docker compose -f docker-compose.dev.yml up    # another port
+```
+
+This runs the real Go server in a Go container with this folder mounted. Edit `index.html` and refresh the browser; the server reads it from disk on every request. After changing Go code, press Ctrl+C and start it again. The first run downloads the Go image and creates a `services.json` from the sample; that file, your backups and uploads are ignored by git.
+
+Without Docker, if you have Go: `cd server`, set `ROOT` to the repo folder and `ADDR` to `:8787`, then `go run .`. Some Windows setups (Smart App Control, WDAC, AppLocker) refuse to run a program that was just compiled, so `go run` and `go test` fail with "An Application Control policy has blocked this file". The Docker route avoids that.
+
+To try the finished image instead: `docker compose up --build`, then open `http://localhost:8080`. Data goes to `./.data`.
 
 ## Run the checks
 
-```powershell
+```sh
 # page
-cd tests; npm install; npm test
+cd tests && npm install && npm test
 
-# server
-cd server; gofmt -l .; go vet ./...; go test ./...
+# server, in the same container the dev server uses
+docker compose -f docker-compose.dev.yml run --rm --no-deps toran-dev sh -c 'test -z "$(gofmt -l .)" && go vet ./... && go test ./...'
+
+# server, with Go installed on the host
+cd server && gofmt -l . && go vet ./... && go test ./...
 ```
 
 `npm test` runs two suites: the page on its own, and the page against a stand-in for the server's API (status, backups).
 
-The server tests cover config saving, backups and restore, upload validation, the path allow-list, LAN-only writes and status checks.
-
-## Run it locally
-
-```powershell
-.\dev.ps1            # http://localhost:8787
-.\dev.ps1 -Test      # run the page tests and the server checks first
-.\dev.ps1 -Port 9090   # if 8787 is taken
-.\dev.ps1 -Docker     # run the Go server in a container instead (see below)
-```
-
-This runs the real Go server against this folder. Edit `index.html` and refresh the browser; the server reads it from disk on every request. A `services.json` created here is ignored by git.
-
-**If Windows blocks the server.** Some machines (Smart App Control, WDAC, AppLocker) refuse to run a program that was just compiled, so `go run` and `go test` fail with "An Application Control policy has blocked this file". Use `.\dev.ps1 -Docker`: it runs the same server in a Go container with this folder mounted, so editing `index.html` still shows on refresh (restart after changing Go code). With `-Test` it also runs gofmt, `go vet` and `go test` inside the container. It needs Docker, and the first run downloads the Go image.
-
-To try the Docker image instead: `docker compose up --build`, then open `http://localhost:8080`. Data goes to `./.data`.
+The server tests cover config saving, backups and restore, upload validation, the path allow-list, LAN-only writes and status checks. CI runs all of this on every pull request (see below).
 
 ## Build for the Pi
 

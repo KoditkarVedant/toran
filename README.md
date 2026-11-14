@@ -4,7 +4,7 @@ A fast, good-looking start page for your home server. One tile per service, so y
 
 *Toran* is the ceremonial arched gateway at the entrance of an Indian home or temple. This is the gateway to your self-hosted apps.
 
-> **Status: pre-release.** The page is tested in a simulated browser. The Go server has unit tests, but they have not been run yet and it has not been run on a real Pi. Treat the first deploy as the first test.
+> **Status: pre-release (0.1.x).** The page is tested in a simulated browser and the Go server has unit tests, which pass. It has not been run on a real Pi yet, so treat the first deploy as the first test. Expect changes between releases.
 
 ## What it does
 
@@ -21,7 +21,7 @@ A fast, good-looking start page for your home server. One tile per service, so y
 docker run -d --name toran --restart unless-stopped -p 8080:8080 -v toran-data:/data youruser/toran:latest
 ```
 
-Then open `http://<host>:8080`. Build and publish your own image with `publish.ps1`, and run it locally with `dev.ps1`: see [docs/development.md](docs/development.md).
+Then open `http://<host>:8080`. Build and publish your own image with `publish.ps1`, and run it locally with `docker-compose.dev.yml`: see [docs/development.md](docs/development.md).
 
 ## Quick start (Portainer, no registry)
 
@@ -47,7 +47,7 @@ There is **no login yet**. Saving is limited to private-network clients by defau
 | `contrib/nginx.conf` | Config for running the page behind nginx with no Go server |
 | `build.ps1`, `stack.yml` | Build the Pi binaries; the Portainer stack |
 | `Dockerfile`, `docker/`, `docker-compose.yml` | The multi-arch image and its local compose file |
-| `dev.ps1`, `publish.ps1` | Run locally; build and push the image to Docker Hub |
+| `docker-compose.dev.yml`, `publish.ps1` | Run it locally from this folder; build and push the image to Docker Hub |
 | `docs/` | Documentation site source |
 
 ## Credits
