@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" class="boot">
+<html lang="en" class="boot" data-gate="wait">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -295,12 +295,31 @@ dialog#ss::backdrop{background:#000}
   background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 16px;box-shadow:var(--shadow);transition:.2s}
 #toast.show{opacity:1;transform:translate(-50%,0)}
 #toast.bad{border-color:var(--bad);color:var(--bad)}
+/* Login and first-run screen. While data-gate is set the dashboard is hidden: "wait" = checking the session. */
+html[data-gate] #app,html[data-gate] #drawer,html[data-gate] #bg{display:none!important}
+#auth{display:none;min-height:100vh;align-items:center;justify-content:center;padding:24px}
+html[data-gate=setup] #auth,html[data-gate=login] #auth{display:flex}
+.auth-card{width:min(400px,100%);padding:26px;border-radius:18px;border:1px solid var(--line);background:var(--card);display:flex;flex-direction:column;gap:14px}
+.auth-card h1{margin:0;font-size:20px;display:flex;align-items:center;gap:10px}
+.auth-card p{margin:0}
+.auth-card form{display:flex;flex-direction:column;gap:14px}
+.auth-msg{font-size:13px;min-height:1.3em;color:var(--mute)}
+.auth-msg.bad{color:var(--bad)}
+/* account drawer */
+.acct .f .f,.acct .f .btnrow,.acct .f .auth-msg{margin-top:12px}
+.acct .f .urow:first-child{margin-top:0}
+.urow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
+.urow .nm{font-weight:600;flex:1;min-width:90px}
+.urow .tag{font-size:11px;padding:2px 7px;border-radius:99px;border:1px solid var(--line);color:var(--mute)}
+.urow .acts{display:flex;gap:6px;flex-wrap:wrap;width:100%}
+.urow.off .nm{opacity:.55;text-decoration:line-through}
 </style>
 <link rel="stylesheet" href="custom.css">
 </head>
 <body>
 <div id="bg"></div>
 <script>try{const b=JSON.parse(localStorage.getItem('toran.boot')||'null');if(b&&b.w){const e=document.getElementById('bg');e.style.display='block';e.style.backgroundImage=b.w}}catch{}</script>
+<div id="auth"></div>
 <div id="app">
   <header id="topbar">
     <div class="brand">
@@ -318,7 +337,9 @@ dialog#ss::backdrop{background:#000}
       <div class="actions">
         <button class="ib" id="btn-search" title="Search" aria-label="Search"></button>
         <button class="ib" id="btn-edit" title="Edit services" aria-label="Edit services"></button>
-        <button class="ib" id="btn-settings" title="Appearance &amp; settings" aria-label="Appearance and settings"></button>      </div>
+        <button class="ib" id="btn-settings" title="Appearance &amp; settings" aria-label="Appearance and settings"></button>
+        <button class="ib" id="btn-account" style="display:none" title="Account" aria-label="Account"></button>
+      </div>
     </div>
   </header>
 
@@ -438,7 +459,7 @@ const ICONS = {
 /* ======================================================================
    Helpers
    ====================================================================== */
-const KEY = 'toran.config.v2';
+let KEY = 'toran.config.v2';   // becomes per-user once someone is logged in (useAccount)
 const $ = s => document.querySelector(s);
 const el = (t, a = {}, ...c) => {
   const e = document.createElement(t);
@@ -454,7 +475,7 @@ const icoEl = k => { const s = el('span', { class: 'svg' }); s.innerHTML = ICONS
 const resolve = u => /^:?\d+$/.test(u) ? `${location.protocol}//${location.hostname}:${u.replace(':', '')}` : u;
 // Links come from services.json, which anyone allowed to save can edit. A javascript: link would run in this page when
 // clicked, so those schemes become a no-op. Whitespace and control characters are dropped first: browsers ignore them inside a scheme.
-const safeHref = u => /^(javascript|data|vbscript|blob):/i.test(String(u).replace(/[\u0000- \u007f-\u009f]/g, '')) ? '#' : u;
+const safeHref = u => /^(javascript|data|vbscript|blob):/i.test(String(u).replace(/[\u0000-\u0020\u007f-\u009f]/g, '')) ? '#' : u;
 const hue = s => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
 const isImg = s => /^(https?:|\/|\.)/.test(s || '');
 const isLocalWall = u => /^wallpaper\//.test(u || '');
@@ -483,7 +504,7 @@ function migrate(c) {   // earlier versions had one combined "design" setting
   return c;
 }
 async function fromFile() {
-  try { const r = await fetch('services.json', { cache: 'no-store' }); if (r.ok) return await r.json(); } catch {}
+  try { const r = await srv('services.json', { cache: 'no-store' }); if (r.ok) return await r.json(); } catch {}
   return null;
 }
 async function load() {
@@ -502,7 +523,7 @@ async function persist() {
   try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch {}
   saveNote('Saving…');
   try {
-    const r = await fetch('services.json', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cfg, null, 2) });
+    const r = await srv('services.json', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cfg, null, 2) });
     if (!r.ok) throw new Error(r.status);
     try { localStorage.removeItem(KEY); } catch {}
     dirty = false; saveNote('Saved ✓'); return true;
@@ -561,7 +582,7 @@ const canLoad = u => new Promise(r => { const im = new Image(); im.onload = () =
 async function cacheIcon(slug, url) {
   try {
     const ext = url.endsWith('.png') ? 'png' : 'svg', b = await (await fetch(url)).blob();
-    await fetch(`icons/${slug}.${ext}`, { method: 'PUT', headers: { 'Content-Type': b.type || 'image/svg+xml' }, body: b });
+    await srv(`icons/${slug}.${ext}`, { method: 'PUT', headers: { 'Content-Type': b.type || 'image/svg+xml' }, body: b });
   } catch {}
 }
 function resolveIcon(slug) {
@@ -593,7 +614,7 @@ function icon(item) { const box = el('div', { class: 'ico' }); fillIcon(box, ite
 const linkAttrs = () => cfg.settings?.newTab ? { target: '_blank', rel: 'noopener' } : {};
 
 /* ---- recently opened / most used (per browser) ---- */
-const RKEY = 'toran.recent';
+let RKEY = 'toran.recent';
 const recentMap = () => {
   try { const m = JSON.parse(localStorage.getItem(RKEY) || '{}'); for (const k in m) if (typeof m[k] === 'number') m[k] = { t: m[k], n: 1 }; return m; }
   catch { return {}; }
@@ -699,7 +720,7 @@ async function checkAll() {
   if (document.hidden || cfg.settings?.status === false) return;
   if (api) {
     try {
-      const r = await fetch('api/status', { cache: 'no-store' });
+      const r = await srv('api/status', { cache: 'no-store' });
       if (r.ok) {
         const st = await r.json();
         for (const g of cfg.groups) for (const i of g.items) { const c = st[i.url]; if (c) { const u = resolve(i.url); status[u] = c.state; statusInfo[u] = c; } }
@@ -748,7 +769,7 @@ function tick() {
    ====================================================================== */
 let drawerView = null, dTab = 'look', snap = null;
 const orphans = new Set();
-const dropWall = u => { if (isLocalWall(u)) fetch(u, { method: 'DELETE' }).catch(() => {}); };
+const dropWall = u => { if (isLocalWall(u)) srv(u, { method: 'DELETE' }).catch(() => {}); };
 const STYLE_ONLY = new Set(['theme', 'surface', 'accent', 'op', 'radius', 'font', 'tileMin', 'wall', 'wallBlur', 'dim', 'layout', 'topbar', 'scale']);
 
 function setKey(k, v) {
@@ -937,7 +958,7 @@ function openDrawer(view, arg) {
   if (view === 'settings' && drawerView !== 'settings') snap = structuredClone(cfg.settings || {});
   drawerView = view;
   const d = $('#drawer'); d.inert = false; d.classList.add('open'); document.body.classList.add('drawer-open');
-  if (view === 'service') drawService(arg.group, arg.item); else drawSettings();
+  if (view === 'service') drawService(arg.group, arg.item); else if (view === 'account') drawAccount(); else drawSettings();
 }
 async function closeDrawer() {
   const d = $('#drawer'); d.classList.remove('open'); d.inert = true; document.body.classList.remove('drawer-open');
@@ -964,7 +985,7 @@ function backupBox() {
   const box = el('div', {}, el('div', { class: 'hint' }, 'Loading…'));
   (async () => {
     try {
-      const list = await (await fetch('api/backups', { cache: 'no-store' })).json();
+      const list = await (await srv('api/backups', { cache: 'no-store' })).json();
       box.replaceChildren(...(list.length ? list.slice(0, 6).map(b => el('div', { class: 'bkrow' },
         el('span', {}, new Date(b.time).toLocaleString()),
         el('button', { class: 'btn sm', type: 'button', onclick: () => restoreBackup(b.name) }, 'Restore')))
@@ -976,7 +997,7 @@ function backupBox() {
 async function restoreBackup(name) {
   if (!confirm('Restore this backup? Your current setup is backed up first, so this can be undone.')) return;
   try {
-    const r = await fetch('api/backups/restore', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+    const r = await srv('api/backups/restore', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
     if (!r.ok) throw new Error(r.status);
     await reloadFresh(); toast('Backup restored');
   } catch { toast('Could not restore that backup', true); }
@@ -1001,12 +1022,150 @@ $('#wfile').onchange = async e => {
   const msg = $('#w-msg'); if (msg) msg.textContent = 'Uploading…';
   try {
     const path = `wallpaper/bg-${Date.now()}.jpg`;
-    const r = await fetch(path, { method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: await prepWallpaper(f) });
+    const r = await srv(path, { method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: await prepWallpaper(f) });
     if (!r.ok) throw new Error(r.status);
     setKey('wall', path); if (S().dim === undefined) setKey('dim', 25);
     drawBody(); const m2 = $('#w-msg'); if (m2) m2.textContent = 'Uploaded.';
-  } catch { const m2 = $('#w-msg'); if (m2) m2.textContent = 'Upload failed. Is the folder writable and nginx.conf in place?'; }
+  } catch { const m2 = $('#w-msg'); if (m2) m2.textContent = 'Upload failed. Is the data folder writable by the server?'; }
 };
+
+/* ======================================================================
+   Accounts (Go server only): the login screen, who is logged in, and what happens when a login ends.
+   Without the Go server (the page on plain nginx) none of this runs and the page works as before.
+   ====================================================================== */
+let me = null;                          // { id, name, role } while logged in; null without accounts
+function reloadPage() { location.reload(); }
+const field = (label, attrs) => { const i = el('input', { class: 'in', 'aria-label': label, ...attrs }); return [i, el('div', { class: 'f' }, el('div', { class: 'lbl' }, label), i)]; };
+const pwField = (label, auto) => field(label, { type: 'password', autocomplete: auto });
+
+/* Every request that needs a login goes through srv(). If the login has ended (a long absence, a password changed
+   elsewhere, the account disabled), the login screen covers the page, unsaved changes stay in memory, and the
+   request is repeated once the person has logged in again. */
+let relogin = null;
+async function srv(url, opts) {
+  let r = await fetch(url, opts);
+  if (r.status === 401 && me) {
+    relogin ||= authScreen('login', 'Your login has ended. Log in again to continue; your changes are kept.').finally(() => { relogin = null; });
+    const u = await relogin;
+    if (u.id !== me.id) { reloadPage(); return new Promise(() => {}); }   // another person logged in: start over with their data
+    r = await fetch(url, opts);
+  }
+  return r;
+}
+/* A JSON request to the account API: { ok, status, data, error }. */
+async function call(url, method, body) {
+  try {
+    const r = await srv(url, { method, headers: body ? { 'Content-Type': 'application/json' } : undefined, body: body ? JSON.stringify(body) : undefined, cache: 'no-store' });
+    const data = r.status === 204 ? null : await r.json().catch(() => null);
+    return { ok: r.ok, status: r.status, data, error: data?.error };
+  } catch { return { ok: false, status: 0, data: null, error: 'Cannot reach the server.' }; }
+}
+
+/* The login screen (state "login") or the first-run screen (state "setup"). Resolves with the user once they are in. */
+function authScreen(state, notice) {
+  return new Promise(resolve => {
+    const setup = state === 'setup';
+    const msg = el('div', { class: 'auth-msg', role: 'alert' }, notice || '');
+    const [code, codeF] = field('Setup code', { autocomplete: 'off', spellcheck: 'false', placeholder: 'shown in the server log' });
+    const [name, nameF] = field('User name', { autocomplete: 'username', autocapitalize: 'none', spellcheck: 'false' });
+    const [pw, pwF] = pwField(setup ? 'Choose a password (at least 10 characters)' : 'Password', setup ? 'new-password' : 'current-password');
+    const go = el('button', { class: 'btn primary', type: 'submit' }, setup ? 'Create the admin account' : 'Log in');
+    const form = el('form', { onsubmit: async e => {
+      e.preventDefault(); go.disabled = true; msg.className = 'auth-msg'; msg.textContent = '';
+      try {
+        const body = setup ? { code: code.value, name: name.value, password: pw.value } : { name: name.value, password: pw.value };
+        const r = await fetch(setup ? 'api/setup' : 'api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) { msg.className = 'auth-msg bad'; msg.textContent = j.error || 'Something went wrong (' + r.status + ').'; pw.value = ''; pw.focus(); return; }
+        $('#auth').replaceChildren(); document.documentElement.removeAttribute('data-gate'); resolve(j.user);
+      } catch { msg.className = 'auth-msg bad'; msg.textContent = 'Cannot reach the server.'; }
+      finally { go.disabled = false; }
+    } }, setup ? codeF : null, nameF, pwF, msg, go);
+    $('#auth').replaceChildren(el('div', { class: 'auth-card' },
+      el('h1', {}, document.querySelector('#topbar .brand svg').cloneNode(true), 'Toran'),
+      setup ? el('p', { class: 'hint' }, 'Welcome! Create the first account; it will be the administrator. The setup code is printed in the server log (with Docker: docker logs toran).') : null,
+      form));
+    document.documentElement.dataset.gate = state;
+    (setup ? code : name).focus();
+  });
+}
+/* At start: who is logged in? null means there is no account system (the page is on a plain web server). */
+async function bootSession() {
+  let s;
+  try { const r = await fetch('api/session', { cache: 'no-store' }); if (!r.ok) return null; s = await r.json(); } catch { return null; }
+  if (!s || !['setup', 'login', 'ok'].includes(s.state)) return null;
+  return s.state === 'ok' ? s.user : authScreen(s.state);
+}
+/* Browser storage is kept per person, so two people on one browser never see each other's unsaved changes or recents. */
+function useAccount(u) {
+  me = u; KEY = 'toran.config.v2.' + u.id; RKEY = 'toran.recent.' + u.id;
+  const b = $('#btn-account'); b.style.display = ''; b.style.fontWeight = '700'; b.textContent = u.name.slice(0, 1).toUpperCase(); b.title = 'Account: ' + u.name;
+}
+async function logout() {
+  try { await fetch('api/logout', { method: 'POST' }); } catch {}
+  try { localStorage.removeItem('toran.boot'); } catch {}      // the theme cache of the person who is leaving
+  reloadPage();
+}
+$('#btn-account').onclick = () => (drawerView === 'account' ? closeDrawer() : openDrawer('account'));
+
+function drawAccount() {
+  const msg = el('div', { class: 'auth-msg', role: 'status' });
+  const [cur, curF] = pwField('Current password', 'current-password'), [nw, nwF] = pwField('New password (at least 10 characters)', 'new-password');
+  const save = el('button', { class: 'btn primary sm', type: 'button', onclick: async () => {
+    msg.className = 'auth-msg'; msg.textContent = 'Saving…';
+    const r = await call('api/password', 'POST', { current: cur.value, new: nw.value });
+    if (r.ok) { cur.value = nw.value = ''; msg.textContent = 'Password changed. Your other devices were logged out.'; }
+    else { msg.className = 'auth-msg bad'; msg.textContent = r.error || 'Could not change the password.'; }
+  } }, 'Change password');
+  $('#drawer').replaceChildren(
+    el('div', { class: 'dr-head' }, el('h3', {}, 'Account'),
+      el('button', { class: 'ib sm', type: 'button', title: 'Close', 'aria-label': 'Close', onclick: closeDrawer }, '✕')),
+    el('div', { class: 'dr-body acct', id: 'drbody' },
+      group(null, el('div', {}, el('b', {}, me.name), el('span', { class: 'hint' }, me.role === 'admin' ? ' · administrator' : ' · user'))),
+      group('Change password', curF, nwF, el('div', { class: 'btnrow' }, save), msg),
+      me.role === 'admin' ? group('Users', usersBox()) : null),
+    el('div', { class: 'dr-foot' }, el('button', { class: 'btn sm', type: 'button', onclick: logout }, 'Log out'), el('span', { class: 'sp' }),
+      el('button', { class: 'btn primary sm', type: 'button', onclick: closeDrawer }, 'Done')));
+}
+
+/* Admins: list, add, and change users. Every action asks the server, then shows the list again. */
+function usersBox() {
+  const box = el('div', {}), note = el('div', { class: 'auth-msg', role: 'status' });
+  const say = (t, bad) => { note.className = 'auth-msg' + (bad ? ' bad' : ''); note.textContent = t; };
+  const act = async (url, method, body) => { const r = await call(url, method, body); say(r.ok ? '' : r.error || 'That did not work.', !r.ok); await list(); return r.ok; };
+  const patch = (u, body) => act('api/users/' + u.id, 'PATCH', body);
+  async function list() {
+    const r = await call('api/users', 'GET');
+    if (!r.ok) { box.replaceChildren(el('div', { class: 'hint' }, 'Could not load the users.')); return; }
+    box.replaceChildren(...r.data.map(row), addForm(), note);
+  }
+  function row(u) {
+    const self = u.id === me.id, acts = el('div', { class: 'acts' });
+    if (!self) acts.append(
+      el('button', { class: 'btn sm', type: 'button', onclick: () => resetForm(u, acts) }, 'Reset password'),
+      el('button', { class: 'btn sm', type: 'button', onclick: () => patch(u, { disabled: !u.disabled }) }, u.disabled ? 'Enable' : 'Disable'),
+      el('button', { class: 'btn sm', type: 'button', onclick: () => patch(u, { role: u.role === 'admin' ? 'user' : 'admin' }) }, u.role === 'admin' ? 'Make user' : 'Make admin'),
+      el('button', { class: 'btn sm danger', type: 'button', onclick: () => confirm('Remove ' + u.name + '? Their files stay on the server, but they can no longer log in.') && act('api/users/' + u.id, 'DELETE') }, 'Remove'));
+    return el('div', { class: 'urow' + (u.disabled ? ' off' : '') }, el('span', { class: 'nm' }, u.name + (self ? ' (you)' : '')),
+      el('span', { class: 'tag' }, u.role), u.disabled ? el('span', { class: 'tag' }, 'disabled') : null, acts);
+  }
+  function resetForm(u, acts) {
+    const [pw, pwF] = pwField('New password for ' + u.name, 'new-password');
+    acts.replaceChildren(pwF,
+      el('button', { class: 'btn primary sm', type: 'button', onclick: () => patch(u, { password: pw.value }) }, 'Set password'),
+      el('button', { class: 'btn sm', type: 'button', onclick: list }, 'Cancel'));
+    pw.focus();
+  }
+  function addForm() {
+    const [name, nameF] = field('User name', { autocomplete: 'off', autocapitalize: 'none', spellcheck: 'false' });
+    const [pw, pwF] = pwField('Password (at least 10 characters)', 'new-password');
+    const role = el('select', { class: 'in', 'aria-label': 'Role' }, el('option', { value: 'user' }, 'User'), el('option', { value: 'admin' }, 'Administrator'));
+    return group('Add a user', nameF, el('div', { class: 'f' }, el('div', { class: 'lbl' }, 'Role'), role), pwF,
+      el('div', { class: 'btnrow' }, el('button', { class: 'btn primary sm', type: 'button', onclick: () => act('api/users', 'POST', { name: name.value, role: role.value, password: pw.value }) }, 'Add user')));
+  }
+  list();
+  return box;
+}
 
 /* ======================================================================
    Top bar, search, keyboard
@@ -1108,6 +1267,9 @@ setInterval(() => {
    ====================================================================== */
 (async () => {
   $('#drawer').inert = true;
+  const who = await bootSession();                       // may show the login or first-run screen and wait for it
+  document.documentElement.removeAttribute('data-gate');
+  if (who) useAccount(who);
   cfg = await load(); await detectApi();
   applySettings(); render(); tick(); checkAll(); loadWeather();
   requestAnimationFrame(() => requestAnimationFrame(() => document.documentElement.classList.remove('boot')));
