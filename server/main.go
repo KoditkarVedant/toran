@@ -7,8 +7,8 @@
 //
 // Settings come from environment variables (see envOr calls). No third-party packages.
 //
-// Layout: server.go (type + settings), access.go (who may write), origin.go (cross-site
-// protection), config.go and backups.go (services.json), uploads.go, static.go, status.go,
+// Layout: server.go (type + settings), access.go (who may write), proxy.go (visitor address
+// behind a proxy), origin.go (cross-site protection), config.go and backups.go (services.json), uploads.go, static.go, status.go,
 // httpx.go (helpers).
 package main
 
@@ -40,6 +40,9 @@ func main() {
 	}
 	s := newServer(root)
 	if err := s.trustOrigins(envOr("TRUSTED_ORIGINS", "")); err != nil {
+		log.Fatal(err)
+	}
+	if err := s.trustProxies(envOr("TRUSTED_PROXIES", "")); err != nil {
 		log.Fatal(err)
 	}
 	addr := envOr("ADDR", ":8080")

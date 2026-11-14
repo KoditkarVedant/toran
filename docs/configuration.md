@@ -44,6 +44,7 @@ Almost everything is changed in the page: the gear button opens the settings dra
 | `ROOT` | `.` | Folder holding the page, `services.json`, backups and uploads |
 | `LAN_ONLY` | `true` | Only private-network clients may save. `false` allows anyone. |
 | `TRUSTED_ORIGINS` | | Comma-separated browser addresses (`scheme://host[:port]`) allowed to save when a reverse proxy changes the `Host` header. See [Behind a reverse proxy](#behind-a-reverse-proxy). |
+| `TRUSTED_PROXIES` | | Comma-separated IP addresses and CIDR ranges of reverse proxies whose `X-Forwarded-For` header is believed. See [Behind a reverse proxy](#behind-a-reverse-proxy). |
 | `CHECK_HOST` | `127.0.0.1` | Host used for bare-port status checks |
 | `GOMEMLIMIT` | | Go runtime soft memory limit, for example `24MiB` |
 
@@ -66,9 +67,42 @@ Almost everything is changed in the page: the gear button opens the settings dra
 
 ## Behind a reverse proxy
 
-The cross-site check compares the browser's `Origin` with the `Host` header the server receives. If your proxy passes the original `Host` through, nothing needs configuring. If it rewrites it (the server sees `toran:8080` while the browser is on `https://toran.example.org`), saving fails with `403 request blocked`. Fix it either way:
+Two things change when a proxy (nginx, Caddy, Traefik, a Cloudflare tunnel...) sits in front of Toran, and each has a setting.
 
-- keep the original host: nginx `proxy_set_header Host $host;`, Caddy does this by default; or
+**1. Who is the visitor? `TRUSTED_PROXIES`.** Toran sees the proxy's address, not the visitor's, so `LAN_ONLY` would judge the proxy. List your proxy and Toran reads the visitor from the `X-Forwarded-For` header instead:
+
+```
+TRUSTED_PROXIES=127.0.0.1                # proxy on the same machine
+TRUSTED_PROXIES=172.18.0.0/16            # proxy in the same Docker network (see: docker network inspect)
+```
+
+The header is only believed when the connection comes from a listed proxy, and it is read from the right, the end your proxy writes. Entries a visitor adds on the left are never used. An unreadable header is refused. Without this setting the header is ignored completely, which is the safe default. Never list a range that a visitor could be in.
+
+**2. Which website made the request? `TRUSTED_ORIGINS`.** The cross-site check compares the browser's `Origin` with the `Host` header the server receives. If your proxy passes the original `Host` through, nothing needs configuring. If it rewrites it (the server sees `toran:8080` while the browser is on `https://toran.example.org`), saving fails with `403 request blocked`. Fix it either way:
+
+- keep the original host, or
 - tell Toran the public address: `TRUSTED_ORIGINS=https://toran.example.org`.
 
-The server logs every blocked request with its `Origin` and `Host`, so you can see what to put in `TRUSTED_ORIGINS`.
+The server logs every blocked request with its `Origin` and `Host`, so you can see what to put there.
+
+**nginx**
+
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_set_header Host $host;                                 # keeps the cross-site check working
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; # appends the visitor on the right
+}
+```
+
+**Caddy**
+
+```
+toran.example.org {
+    reverse_proxy 127.0.0.1:8080
+}
+```
+
+Caddy keeps `Host` and sets `X-Forwarded-For` by default.
+
+Toran does not send `Strict-Transport-Security`, because most installs are plain HTTP on a home network. If you serve it over HTTPS, add that header at the proxy.

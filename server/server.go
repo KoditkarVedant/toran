@@ -5,6 +5,7 @@ package main
 import (
 	"crypto/tls"
 	"net/http"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"sync"
@@ -25,6 +26,7 @@ type server struct {
 	root        string                      // folder holding index.html, services.json, uploads, backups...
 	lanOnly     bool                        // only private-network clients may write
 	origin      *http.CrossOriginProtection // rejects writes steered by another website
+	proxies     []netip.Prefix              // reverse proxies whose X-Forwarded-For is believed (TRUSTED_PROXIES)
 	maxBackups  int
 	backupEvery time.Duration
 
