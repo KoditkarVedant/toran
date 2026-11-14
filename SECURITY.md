@@ -15,7 +15,8 @@ Toran is built for a trusted home network. Read this before you expose it.
 **It does:**
 
 - Allow saving and uploading only from the local network (`LAN_ONLY`, on by default), and judge the real visitor behind a reverse proxy when you list the proxy in `TRUSTED_PROXIES`.
-- Refuse changes that another website steers your browser into making (cross-site request protection).
+- Refuse changes that another website steers your browser into making (cross-site request protection), and, when you set `ALLOWED_HOSTS`, requests that arrive under a name that is not yours (DNS rebinding).
+- Neutralise `javascript:` and similar links in tiles, so a planted tile cannot run script.
 - Keep the status checker away from cloud-metadata and other link-local addresses.
 - Send security headers (a Content-Security-Policy, no framing, no content sniffing), serve only an allow-list of files, sandbox uploaded images, and run the container as an ordinary user.
 

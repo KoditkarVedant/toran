@@ -8,7 +8,7 @@
 // Settings come from environment variables (see envOr calls). No third-party packages.
 //
 // Layout: server.go (type + settings), access.go (who may write), proxy.go (visitor address
-// behind a proxy), origin.go (cross-site protection), headers.go (security headers), config.go and backups.go (services.json), uploads.go, static.go, status.go,
+// behind a proxy), origin.go (cross-site protection), hosts.go (host allowlist), headers.go (security headers), config.go and backups.go (services.json), uploads.go, static.go, status.go,
 // httpx.go (helpers).
 package main
 
@@ -31,8 +31,8 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("PUT /icons/{name}", s.putFile("icons", 2<<20, ".svg", ".png", ".webp"))
 	mux.HandleFunc("GET /", s.static)
 	// Outermost layers, so no route can skip them: the headers go on every answer, including a
-	// refusal from the cross-site check.
-	return securityHeaders(s.origin.Handler(mux))
+	// refusal from the host or cross-site checks.
+	return securityHeaders(s.hostGuard(s.origin.Handler(mux)))
 }
 
 func main() {
@@ -45,6 +45,9 @@ func main() {
 		log.Fatal(err)
 	}
 	if err := s.trustProxies(envOr("TRUSTED_PROXIES", "")); err != nil {
+		log.Fatal(err)
+	}
+	if err := s.allowHosts(envOr("ALLOWED_HOSTS", "")); err != nil {
 		log.Fatal(err)
 	}
 	addr := envOr("ADDR", ":8080")

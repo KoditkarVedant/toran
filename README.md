@@ -34,7 +34,7 @@ Details: [docs/deploy.md](docs/deploy.md).
 
 ## Security
 
-There is **no login yet**. By default only private-network clients can save changes (`LAN_ONLY`), another website cannot make your browser change the page, the status checker stays away from cloud-metadata addresses, the pages carry security headers, and the Docker image runs as an ordinary user. But anyone on your network can still change the page, so do not expose it to the internet. Behind a reverse proxy, set `TRUSTED_PROXIES` and, if needed, `TRUSTED_ORIGINS`. See [docs/configuration.md](docs/configuration.md#security) and [SECURITY.md](SECURITY.md).
+There is **no login yet**. By default only private-network clients can save changes (`LAN_ONLY`), another website cannot make your browser change the page, the status checker stays away from cloud-metadata addresses, the pages carry security headers, and the Docker image runs as an ordinary user. But anyone on your network can still change the page, so do not expose it to the internet. If you reach it by a host name, set `ALLOWED_HOSTS` (it stops DNS rebinding). Behind a reverse proxy, set `TRUSTED_PROXIES` and, if needed, `TRUSTED_ORIGINS`. See [docs/configuration.md](docs/configuration.md#security) and [SECURITY.md](SECURITY.md).
 
 ## Repository layout
 

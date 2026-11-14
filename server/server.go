@@ -26,6 +26,7 @@ type server struct {
 	lanOnly     bool                        // only private-network clients may write
 	origin      *http.CrossOriginProtection // rejects writes steered by another website
 	proxies     []netip.Prefix              // reverse proxies whose X-Forwarded-For is believed (TRUSTED_PROXIES)
+	hosts       map[string]bool             // host names Toran answers to (ALLOWED_HOSTS); nil = any
 	maxBackups  int
 	backupEvery time.Duration
 

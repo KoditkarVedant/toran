@@ -10,6 +10,8 @@ can change between releases, including the config format and the API.
 - New `TRUSTED_PROXIES` setting: behind a reverse proxy, `LAN_ONLY` now judges the visitor (from `X-Forwarded-For`, read from the right, only from listed proxies) instead of the proxy.
 - The server-side status checker refuses link-local (cloud metadata), unspecified and multicast addresses, follows no redirects and only checks `http` and `https` addresses.
 - The Docker image now runs as an ordinary user (`65532`), not root. New volumes just work; an existing root-owned volume needs a one-time `chown` (the container says so and how, see `docs/deploy.md`).
+- Links that would run script (`javascript:`, `data:`, `vbscript:`, `blob:`) in `services.json` are turned into links that do nothing, so a tile planted by someone else cannot run code when clicked.
+- New `ALLOWED_HOSTS` setting (off by default): refuse requests for any host name that is not listed, which stops DNS rebinding. Numeric addresses and `localhost` are always accepted.
 - Security headers on every response: a Content-Security-Policy (no framing, no plugins, fixed `<base>` and form targets), `X-Frame-Options`, `nosniff`, `Referrer-Policy` and `Permissions-Policy`.
 
 ## [0.1.0]
