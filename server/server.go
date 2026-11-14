@@ -29,7 +29,8 @@ type server struct {
 	maxBackups  int
 	backupEvery time.Duration
 
-	dash *dashboard // the one shared dashboard (per-user dashboards replace this when logins arrive)
+	sessions *sessions  // signs login cookies (set up with the accounts feature)
+	dash     *dashboard // the one shared dashboard (per-user dashboards replace this when logins arrive)
 
 	checkHost string // host used for bare-port status checks (127.0.0.1 with host networking)
 	stMu      sync.Mutex
