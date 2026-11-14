@@ -1,10 +1,10 @@
 # Build the multi-arch image and push it to Docker Hub.
 #   docker login                                   (once)
-#   .\publish.ps1 -Image youruser/toran -Version 1.0     pushes :1.0 and :latest
-#   .\publish.ps1 -Image youruser/toran -Version 1.0 -NoPush    build only (checks the Dockerfile)
+#   .\publish.ps1 -Image youruser/toran -Version 0.1.0     pushes :0.1.0 and :latest
+#   .\publish.ps1 -Image youruser/toran -Version 0.1.0 -NoPush    build only (checks the Dockerfile)
 param(
   [Parameter(Mandatory)][string]$Image,      # Docker Hub repository, e.g. youruser/toran
-  [Parameter(Mandatory)][string]$Version,    # e.g. 1.0
+  [Parameter(Mandatory)][string]$Version,    # e.g. 0.1.0
   [string]$Platforms = 'linux/amd64,linux/arm64,linux/arm/v7',
   [switch]$NoPush, [switch]$SkipTests
 )

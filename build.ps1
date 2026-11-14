@@ -1,7 +1,7 @@
 # Builds the Pi binaries and assembles ./deploy (everything you copy to /srv/toran on the Pi).
 #   .\build.ps1              vet + test + build
 #   .\build.ps1 -SkipTests   skip "go test" (e.g. when this PC blocks running unsigned test programs)
-param([switch]$SkipTests)
+param([switch]$SkipTests, [string]$Version = '0.1.0')
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 $out  = Join-Path $root 'deploy'
@@ -28,7 +28,7 @@ try {
   foreach ($t in $targets) {
     $env:GOOS = 'linux'; $env:GOARCH = $t.arch; $env:CGO_ENABLED = '0'
     if ($t.goarm) { $env:GOARM = $t.goarm } else { Remove-Item Env:GOARM -ErrorAction SilentlyContinue }
-    go build -trimpath -ldflags '-s -w' -o (Join-Path $out "bin\toran-$($t.name)") .
+    go build -trimpath -ldflags "-s -w -X main.version=$Version" -o (Join-Path $out "bin\toran-$($t.name)") .
     if ($LASTEXITCODE -ne 0) { throw "build failed for $($t.name)" }
   }
 }
