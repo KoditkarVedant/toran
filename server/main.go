@@ -28,6 +28,11 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("POST /api/login", s.login)
 	mux.HandleFunc("POST /api/logout", s.logout)
 	mux.HandleFunc("POST /api/password", s.authed(s.changePassword))
+	// Managing users: admins only, and a write like any other (LAN_ONLY applies).
+	mux.HandleFunc("GET /api/users", s.admin(s.listUsers))
+	mux.HandleFunc("POST /api/users", s.guard(s.admin(s.createUser)))
+	mux.HandleFunc("PATCH /api/users/{id}", s.guard(s.admin(s.updateUser)))
+	mux.HandleFunc("DELETE /api/users/{id}", s.guard(s.admin(s.deleteUser)))
 	// Everything below needs a logged-in user. Writes also need LAN_ONLY clearance (guard).
 	mux.HandleFunc("GET /api/status", s.authed(s.status))
 	mux.HandleFunc("GET /api/backups", s.forUser((*dashboard).listBackups))
