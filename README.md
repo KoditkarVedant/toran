@@ -18,10 +18,12 @@ A fast, good-looking start page for your home server. One tile per service, so y
 ## Quick start (Docker)
 
 ```sh
-docker run -d --name toran --restart unless-stopped -p 8080:8080 -v toran-data:/data youruser/toran:latest
+docker run -d --name toran --restart unless-stopped -p 8080:8080 -v toran-data:/data vedantkoditkar/toran:latest
 ```
 
-Then open `http://<host>:8080`. Build and publish your own image with `publish.ps1`, and run it locally with `docker-compose.dev.yml`: see [docs/development.md](docs/development.md).
+The same image is also on GitHub's registry: `ghcr.io/koditkarvedant/toran:latest`. Then open `http://<host>:8080`; the first visit asks you to create the admin account (the setup code is in `docker logs toran`).
+
+Build and publish your own image with `publish.ps1`, and run it locally with `docker-compose.dev.yml`: see [docs/development.md](docs/development.md).
 
 ## Quick start (Portainer, no registry)
 

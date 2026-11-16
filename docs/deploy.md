@@ -5,10 +5,10 @@ Two ways: the published Docker image (simplest), or plain binaries copied to the
 ## Run the Docker image
 
 ```sh
-docker run -d --name toran --restart unless-stopped -p 8080:8080 -v toran-data:/data youruser/toran:latest
+docker run -d --name toran --restart unless-stopped -p 8080:8080 -v toran-data:/data vedantkoditkar/toran:latest
 ```
 
-Or in Portainer, a stack with `image: youruser/toran:latest`, `ports: ["8080:8080"]` and a volume on `/data`. Then open `http://<host>:8080`.
+Or in Portainer, a stack with `image: vedantkoditkar/toran:latest`, `ports: ["8080:8080"]` and a volume on `/data`. Then open `http://<host>:8080`.
 
 - `/data` holds the accounts (`users.json`, `secret.key`) and each user's dashboard, backups and uploads. The page files in it are refreshed from the image on every start, so updating is `docker pull` and a restart. Your data is kept.
 - **First start: create the admin.** Read the setup code from the log with `docker logs toran`, open `http://<host>:8080` and fill in the code, a user name and a password. Details, users and the "forgot my password" command: [Accounts and logging in](configuration.md#accounts-and-logging-in).
@@ -17,7 +17,7 @@ Or in Portainer, a stack with `image: youruser/toran:latest`, `ports: ["8080:808
 - **The container does not run as root.** The server runs as user `65532`, and a new volume mounted on `/data` is created with that owner, so a fresh install needs nothing. A volume or folder that already exists and belongs to root (made by an older image, or a Linux bind mount that Docker created) cannot be written, and the container stops with a message saying so. Hand it over once:
 
   ```sh
-  docker run --rm -v toran-data:/data --user 0 --entrypoint chown youruser/toran:latest -R 65532:65532 /data
+  docker run --rm -v toran-data:/data --user 0 --entrypoint chown vedantkoditkar/toran:latest -R 65532:65532 /data
   ```
 
   For a bind mount, `sudo chown -R 65532:65532 ./your-folder` does the same. Or keep the folder as it is and run the container as its owner with `--user <uid>:<gid>` (in compose: `user: "1000:1000"`). Docker Desktop on Windows and macOS needs none of this.
