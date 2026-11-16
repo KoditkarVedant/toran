@@ -78,7 +78,7 @@ git push origin v0.2.0
 
 The version number comes from the tag. It is passed to the build with `-ldflags "-X main.version=..."` and shows up in `GET /api/health`. The `0.2.0` in the source is only the fallback for a plain `go build`.
 
-**Docker Hub (optional).** Images always go to GitHub Container Registry using the built-in `GITHUB_TOKEN`. To also push to Docker Hub, add the repository variable `DOCKERHUB_IMAGE` (for example `youruser/toran`) and the secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`.
+**Docker Hub (optional).** Images always go to GitHub Container Registry using the built-in `GITHUB_TOKEN`. To also push to Docker Hub, add the repository variables `DOCKERHUB_IMAGE` (for example `youruser/toran`) and `DOCKERHUB_USERNAME`, and the **secret** `DOCKERHUB_TOKEN` (an access token with read and write scope; never put it in a variable, which is shown in plain text).
 
 **First time on GitHub.** Under *Settings → Actions → General → Workflow permissions* leave the default read-only setting; the workflows ask for the extra permissions they need. After the first image is pushed, make the package public under the repository's *Packages* if you want others to pull it.
 
