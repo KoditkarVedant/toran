@@ -46,10 +46,10 @@ The server tests cover config saving, backups and restore, upload validation, th
 
 ```powershell
 docker login
-.\publish.ps1 -Image youruser/toran -Version 0.1.0
+.\publish.ps1 -Image youruser/toran -Version 0.2.0
 ```
 
-This vets and tests the server, then builds one multi-arch image (`linux/amd64`, `linux/arm64`, `linux/arm/v7`) and pushes it as `:0.1.0` and `:latest`. Add `-NoPush` to build without pushing, which checks the Dockerfile. See [Deploy](deploy.md#run-the-docker-image).
+This vets and tests the server, then builds one multi-arch image (`linux/amd64`, `linux/arm64`, `linux/arm/v7`) and pushes it as `:0.2.0` and `:latest`. Add `-NoPush` to build without pushing, which checks the Dockerfile. See [Deploy](deploy.md#run-the-docker-image).
 
 ## Conventions
 
@@ -76,7 +76,7 @@ git tag v0.2.0
 git push origin v0.2.0
 ```
 
-The version number comes from the tag. It is passed to the build with `-ldflags "-X main.version=..."` and shows up in `GET /api/health`. The `0.1.0` in the source is only the fallback for a plain `go build`.
+The version number comes from the tag. It is passed to the build with `-ldflags "-X main.version=..."` and shows up in `GET /api/health`. The `0.2.0` in the source is only the fallback for a plain `go build`.
 
 **Docker Hub (optional).** Images always go to GitHub Container Registry using the built-in `GITHUB_TOKEN`. To also push to Docker Hub, add the repository variable `DOCKERHUB_IMAGE` (for example `youruser/toran`) and the secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`.
 

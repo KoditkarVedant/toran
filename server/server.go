@@ -11,7 +11,7 @@ import (
 )
 
 // version is the release number. Release builds override it: -ldflags "-X main.version=1.2.3".
-var version = "0.1.0"
+var version = "0.2.0"
 
 type check struct {
 	State string `json:"state"` // up | warn | down

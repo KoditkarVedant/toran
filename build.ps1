@@ -1,7 +1,7 @@
 # Builds the Pi binaries and assembles ./deploy (everything you copy to /srv/toran on the Pi).
 #   .\build.ps1              vet + test + build
 #   .\build.ps1 -SkipTests   skip "go test" (e.g. when this PC blocks running unsigned test programs)
-param([switch]$SkipTests, [string]$Version = '0.1.0')
+param([switch]$SkipTests, [string]$Version = '0.2.0')
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 $out  = Join-Path $root 'deploy'

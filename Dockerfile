@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # Multi-arch image: docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 ...
 FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS build
-ARG TARGETOS TARGETARCH TARGETVARIANT VERSION=0.1.0
+ARG TARGETOS TARGETARCH TARGETVARIANT VERSION=0.2.0
 WORKDIR /src
 COPY server/go.mod ./
 COPY server/*.go ./
@@ -11,7 +11,7 @@ RUN GOARM="${TARGETVARIANT#v}" CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
 RUN mkdir /data-template
 
 FROM alpine:3
-ARG VERSION=0.1.0
+ARG VERSION=0.2.0
 LABEL org.opencontainers.image.title="toran" \
       org.opencontainers.image.description="A fast start page for your home server" \
       org.opencontainers.image.licenses="MIT" \
